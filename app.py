@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
 import io
-from google.oauth2.service_account import Credentials
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 
@@ -13,14 +12,14 @@ st.set_page_config(
     layout="centered"
 )
 
-# Configuración de credenciales y cliente de Google Drive mediante archivo JSON temporal
+# Configuración de credenciales y cliente de Google Drive
 @st.cache_resource
 def get_drive_service():
     if "gcp_service_account" in st.secrets:
         sec = st.secrets["gcp_service_account"]
         raw_key = sec.get("private_key", "").replace("\\n", "\n")
         
-        creds_dict = {
+        creds_info = {
             "type": sec.get("type", "service_account"),
             "project_id": sec.get("project_id"),
             "private_key_id": sec.get("private_key_id"),
@@ -33,12 +32,8 @@ def get_drive_service():
             "client_x509_cert_url": sec.get("client_x509_cert_url")
         }
         
-        # Archivo temporal para evitar errores de validación de tipos en la nube
-        with open("temp_drive_creds.json", "w") as f:
-            json.dump(creds_dict, f)
-            
         scopes = ["https://www.googleapis.com/auth/drive"]
-        creds = Credentials.from_service_account_file("temp_drive_creds.json", scopes=scopes)
+        creds = service_account.Credentials.from_service_account_info(creds_info, scopes=scopes)
         service = build('drive', 'v3', credentials=creds)
         return service
     return None
