@@ -172,4 +172,23 @@ if not df_existente.empty:
     busqueda = st.text_input("🔍 Buscar equipo o línea...", "")
     
     if busqueda:
-        df_filtrado = df_existente[df
+        df_filtrado = df_existente[
+            df_existente['Equipo'].astype(str).str.contains(busqueda, case=False, na=False) | 
+            df_existente['Línea'].astype(str).str.contains(busqueda, case=False, na=False)
+        ]
+    else:
+        df_filtrado = df_existente
+
+    st.dataframe(df_filtrado, use_container_width=True)
+    
+    if 'Equipo' in df_existente.columns and not df_existente['Equipo'].dropna().empty:
+        equipos_disponibles = df_existente['Equipo'].dropna().unique()
+        equipo_seleccionado = st.selectbox("Ver tendencia histórica de:", equipos_disponibles)
+        
+        if equipo_seleccionado:
+            df_eq = df_existente[df_existente['Equipo'] == equipo_seleccionado]
+            st.write(f"Tendencia para: **{equipo_seleccionado}**")
+            if len(df_eq) > 1 and 'Mes' in df_existente.columns:
+                st.line_chart(df_eq.set_index('Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']])
+else:
+    st.info("Aún no hay registros en tu archivo de Drive. Haz tu primer registro arriba.")
