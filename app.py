@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import json
 import gspread
-from google.oauth2.service_account import Credentials
 
 st.set_page_config(
     page_title="Predictivo Mantenimiento",
@@ -10,22 +10,26 @@ st.set_page_config(
     layout="centered"
 )
 
-# Configuración de conexión a Google Sheets corregida
+# Conexión generada automáticamente desde los Secrets
 def init_connection():
-    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-    
     if "gcp_service_account" in st.secrets:
-        # Cargamos los secretos como diccionario directo
+        # Convertimos los secretos a un diccionario estándar
         creds_dict = dict(st.secrets["gcp_service_account"])
         
-        # Usamos google.oauth2 para evitar errores de codificación
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-        client = gspread.authorize(creds)
-        
+        # Aseguramos que los saltos de línea de la llave privada sean correctos
+        if "private_key" in creds_dict:
+            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
+            
+        # Creamos el archivo JSON temporalmente en el servidor para que gspread lo lea perfecto
+        with open("temp_creds.json", "w") as f:
+            json.dump(creds_dict, f)
+            
+        # Autenticación nativa con el archivo generado
+        client = gspread.service_account(filename="temp_creds.json")
         sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
         return sheet
     else:
-        st.warning("⚠️ Faltan configurar las credenciales de Google Sheets en los Secrets de Streamlit.")
+        st.warning("⚠️ Faltan configurar las credenciales en los Secrets de Streamlit.")
         return None
 
 st.title("⚡ Monitoreo Predictivo")
