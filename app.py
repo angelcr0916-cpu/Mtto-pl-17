@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import io
+import base64
+import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
@@ -12,28 +14,37 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión con limpieza total y robusta de la llave privada
+# Conexión ultra blindada que reconstruye la llave privada de forma segura
 @st.cache_resource
 def get_drive_service():
     try:
         if "gcp_service_account" in st.secrets:
             sec = st.secrets["gcp_service_account"]
-            raw_key = sec.get("private_key", "")
             
-            # Limpieza profunda para eliminar retornos de carro y normalizar saltos de línea
-            clean_key = raw_key.replace("\\n", "\n").replace("\r", "").strip()
+            # Armamos la llave privada asegurando que los saltos de línea sean reales y limpios
+            private_key_lines = [
+                "-----BEGIN PRIVATE KEY-----",
+                "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYYwggSiAgEAAoIBAQDT03uzocC+V",
+                "NewteeCLX9H6Id+GsmyyNAuAiP2Yr15Y/2U1rc948GDfDLW1gQTuFp9ffJW6PzV9",
+                "nbzc4AmTIQt4B+Y9izPNZcInWwOcybJbRZDCW1hQTuFp9ffJW6PzV9nbzc4AmTIQt",
+                "4B+Y9izPNZcInWwOcybJbRZDViiHzR1t+08VGxKQbFAuAwwSfu8/",
+                "n1Kl1ylww8C4UxHBeNNd971TAYRwROOKl0Tbui1aHPd7R8cGiv4J7nDm/kix7n8",
+                "BCKmThEY1Vs=",
+                "-----END PRIVATE KEY-----"
+            ]
+            clean_key = "\n".join(private_key_lines)
 
             creds_info = {
                 "type": sec.get("type", "service_account"),
-                "project_id": sec.get("project_id"),
-                "private_key_id": sec.get("private_key_id"),
+                "project_id": sec.get("project_id", "mi-proyecto-esta"),
+                "private_key_id": sec.get("private_key_id", "313362dea10d7b145000e605b61d2d33634c585d"),
                 "private_key": clean_key,
-                "client_email": sec.get("client_email"),
-                "client_id": sec.get("client_id"),
-                "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
-                "token_uri": sec.get("token_uri", "https://oauth2.googleapis.com/token"),
-                "auth_provider_x509_cert_url": sec.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs"),
-                "client_x509_cert_url": sec.get("client_x509_cert_url")
+                "client_email": sec.get("client_email", "mantenimiento-app@mi-proyecto-esta.iam.gserviceaccount.com"),
+                "client_id": sec.get("client_id", "113409224259727635239"),
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mantenimiento-app%40mi-proyecto-esta.iam.gserviceaccount.com"
             }
             
             scopes = ["https://www.googleapis.com/auth/drive"]
