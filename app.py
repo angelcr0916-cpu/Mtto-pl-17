@@ -12,7 +12,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión limpia y blindada con Google Drive
+# Conexión blindada con limpieza automática de la llave PEM
 @st.cache_resource
 def get_drive_service():
     try:
@@ -20,16 +20,16 @@ def get_drive_service():
             sec = st.secrets["gcp_service_account"]
             raw_key = sec.get("private_key", "")
             
-            if "\\n" in raw_key:
-                formatted_key = raw_key.replace("\\n", "\n")
-            else:
-                formatted_key = raw_key
+            # Limpieza profunda para asegurar formato PEM válido
+            clean_key = raw_key.strip()
+            if "\\n" in clean_key:
+                clean_key = clean_key.replace("\\n", "\n")
 
             creds_info = {
                 "type": sec.get("type"),
                 "project_id": sec.get("project_id"),
                 "private_key_id": sec.get("private_key_id"),
-                "private_key": formatted_key,
+                "private_key": clean_key,
                 "client_email": sec.get("client_email"),
                 "client_id": sec.get("client_id"),
                 "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
@@ -37,6 +37,7 @@ def get_drive_service():
                 "auth_provider_x509_cert_url": sec.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs"),
                 "client_x509_cert_url": sec.get("client_x509_cert_url")
             }
+            
             scopes = ["https://www.googleapis.com/auth/drive"]
             creds = service_account.Credentials.from_service_account_info(creds_info, scopes=scopes)
             service = build('drive', 'v3', credentials=creds)
