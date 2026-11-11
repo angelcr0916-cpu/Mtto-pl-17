@@ -1,18 +1,19 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import json
 import io
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 
 st.set_page_config(
-    page_title="Predictivo Mantenimiento - Drive",
+    page_title="Predictivo Mantenimiento",
     page_icon="📁",
     layout="centered"
 )
 
-# Configuración de credenciales y cliente de Google Drive con tu ID de carpeta fijo
+# Configuración de credenciales y cliente de Google Drive mediante archivo JSON temporal
 @st.cache_resource
 def get_drive_service():
     if "gcp_service_account" in st.secrets:
@@ -32,8 +33,12 @@ def get_drive_service():
             "client_x509_cert_url": sec.get("client_x509_cert_url")
         }
         
+        # Archivo temporal para evitar errores de validación de tipos en la nube
+        with open("temp_drive_creds.json", "w") as f:
+            json.dump(creds_dict, f)
+            
         scopes = ["https://www.googleapis.com/auth/drive"]
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+        creds = Credentials.from_service_account_file("temp_drive_creds.json", scopes=scopes)
         service = build('drive', 'v3', credentials=creds)
         return service
     return None
@@ -167,21 +172,4 @@ if not df_existente.empty:
     busqueda = st.text_input("🔍 Buscar equipo o línea...", "")
     
     if busqueda:
-        df_filtrado = df_existente[df_existente['Equipo'].astype(str).str.contains(busqueda, case=False, na=False) | 
-                                     df_existente['Línea'].astype(str).str.contains(busqueda, case=False, na=False)]
-    else:
-        df_filtrado = df_existente
-
-    st.dataframe(df_filtrado, use_container_width=True)
-    
-    if 'Equipo' in df_existente.columns and not df_existente['Equipo'].dropna().empty:
-        equipos_disponibles = df_existente['Equipo'].dropna().unique()
-        equipo_seleccionado = st.selectbox("Ver tendencia histórica de:", equipos_disponibles)
-        
-        if equipo_seleccionado:
-            df_eq = df_existente[df_existente['Equipo'] == equipo_seleccionado]
-            st.write(f"Tendencia para: **{equipo_seleccionado}**")
-            if len(df_eq) > 1 and 'Mes' in df_existente.columns:
-                st.line_chart(df_eq.set_index('Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']])
-else:
-    st.info("Aún no hay registros en tu archivo de Drive. Haz tu primer registro arriba.")
+        df_filtrado = df_existente[df
