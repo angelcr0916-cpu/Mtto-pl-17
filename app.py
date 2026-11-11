@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
 import gspread
+from google.oauth2.service_account import Credentials
 
 st.set_page_config(
     page_title="Predictivo Mantenimiento",
@@ -10,22 +10,22 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión generada automáticamente desde los Secrets
+# Conexión limpia y directa con gspread y google-auth
 def init_connection():
+    scope = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    
     if "gcp_service_account" in st.secrets:
-        # Convertimos los secretos a un diccionario estándar
-        creds_dict = dict(st.secrets["gcp_service_account"])
+        # Convertimos los secretos a un diccionario de Python estándar
+        secrets_dict = dict(st.secrets["gcp_service_account"])
         
-        # Aseguramos que los saltos de línea de la llave privada sean correctos
-        if "private_key" in creds_dict:
-            creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n")
-            
-        # Creamos el archivo JSON temporalmente en el servidor para que gspread lo lea perfecto
-        with open("temp_creds.json", "w") as f:
-            json.dump(creds_dict, f)
-            
-        # Autenticación nativa con el archivo generado
-        client = gspread.service_account(filename="temp_creds.json")
+        # Creamos las credenciales oficiales de Google
+        creds = Credentials.from_service_account_info(secrets_dict, scopes=scope)
+        
+        # Autorizamos con gspread
+        client = gspread.authorize(creds)
         sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
         return sheet
     else:
