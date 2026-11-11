@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -11,23 +10,36 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión directa leyendo el JSON completo desde los Secrets
+# Conexión blindada extrayendo los campos de forma segura
 def init_connection():
     scope = [
         "https://www.googleapis.com/auth/spreadsheets",
         "https://www.googleapis.com/auth/drive"
     ]
     
-    if "gcp_json" in st.secrets:
-        # Cargamos el JSON exacto sin errores de mapeo
-        creds_dict = json.loads(st.secrets["gcp_json"])
+    if "gcp_service_account" in st.secrets:
+        sec = st.secrets["gcp_service_account"]
         
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
+        # Mapeo seguro campo por campo para evitar cualquier error de tipo o faltantes
+        secrets_dict = {
+            "type": sec.get("type", "service_account"),
+            "project_id": sec.get("project_id"),
+            "private_key_id": sec.get("private_key_id"),
+            "private_key": sec.get("private_key", "").replace("\\n", "\n"),
+            "client_email": sec.get("client_email"),
+            "client_id": sec.get("client_id"),
+            "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
+            "token_uri": sec.get("token_uri", "https://oauth2.googleapis.com/token"),
+            "auth_provider_x509_cert_url": sec.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs"),
+            "client_x509_cert_url": sec.get("client_x509_cert_url")
+        }
+        
+        creds = Credentials.from_service_account_info(secrets_dict, scopes=scope)
         client = gspread.authorize(creds)
         sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
         return sheet
     else:
-        st.warning("⚠️ Falta configurar el secreto 'gcp_json' en Streamlit Cloud.")
+        st.warning("⚠️ Faltan configurar las credenciales [gcp_service_account] en los Secrets.")
         return None
 
 st.title("⚡ Monitoreo Predictivo")
