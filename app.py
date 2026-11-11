@@ -1,119 +1,38 @@
 import streamlit as st
 import pandas as pd
+import os
 from datetime import datetime
-import io
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 
 st.set_page_config(
-    page_title="Predictivo Mantenimiento",
-    page_icon="📁",
+    page_title="Monitoreo Predictivo - Local",
+    page_icon="⚡",
     layout="centered"
 )
 
-@st.cache_resource
-def get_drive_service():
-    try:
-        if "gcp_service_account" in st.secrets:
-            sec = st.secrets["gcp_service_account"]
-            raw_key = sec.get("private_key", "")
-            
-            # Soporta tanto saltos reales como literales por si acaso
-            clean_key = raw_key.replace("\\n", "\n").strip()
+# Archivo CSV local donde se guardará todo el historial de forma directa
+DB_FILE = "historial_predictivo.csv"
 
-            creds_info = {
-                "type": sec.get("type", "service_account"),
-                "project_id": sec.get("project_id", "mi-proyecto-esta"),
-                "private_key_id": sec.get("private_key_id", "313362dea10d7b145000e605b61d2d33634c585d"),
-                "private_key": clean_key,
-                "client_email": sec.get("client_email", "mantenimiento-app@mi-proyecto-esta.iam.gserviceaccount.com"),
-                "client_id": sec.get("client_id", "113409224259727635239"),
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-                "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/mantenimiento-app%40mi-proyecto-esta.iam.gserviceaccount.com"
-            }
-            
-            scopes = ["https://www.googleapis.com/auth/drive"]
-            creds = service_account.Credentials.from_service_account_info(creds_info, scopes=scopes)
-            service = build('drive', 'v3', credentials=creds)
-            return service
-    except Exception as e:
-        st.error(f"Error de autenticación con Google Drive: {e}")
-        return None
+def cargar_datos_locales():
+    if os.path.exists(DB_FILE):
+        try:
+            return pd.read_csv(DB_FILE)
+        except Exception:
+            pass
+    # Si no existe, creamos un DataFrame vacío con las columnas necesarias
+    df_vacio = pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
+    df_vacio.to_csv(DB_FILE, index=False)
+    return df_vacio
 
-drive_service = get_drive_service()
-FOLDER_ID = "15T6wDRWDHQBKtFn_PUv00AccC9dujuv9r"
-FILE_NAME = "historial_predictivo.csv"
+def guardar_datos_locales(df):
+    df.to_csv(DB_FILE, index=False)
 
-def cargar_datos_drive():
-    if not drive_service:
-        return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
-    
-    try:
-        query = f"q='{FOLDER_ID}' in parents and name='{FILE_NAME}' and trashed=false"
-        results = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
-        files = results.get('files', [])
-        
-        if not files:
-            df_vacio = pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
-            guardar_datos_drive(df_vacio)
-            return df_vacio
-        
-        file_id = files[0]['id']
-        request = drive_service.files().get_media(fileId=file_id)
-        fh = io.BytesIO()
-        downloader = MediaIoBaseDownload(fh, request)
-        done = False
-        while not done:
-            status, done = downloader.next_chunk()
-            
-        fh.seek(0)
-        return pd.read_csv(fh)
-    except Exception as e:
-        st.error(f"Error al leer de Google Drive: {e}")
-        return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
+# Interfaz de Usuario
+st.title("⚡ Monitoreo Predictivo (Modo Directo)")
+st.markdown("Registro y control de parámetros críticos operando de forma limpia y sin complicaciones.")
 
-def guardar_datos_drive(df):
-    if not drive_service:
-        return
-    
-    try:
-        csv_buffer = io.BytesIO()
-        df.to_csv(csv_buffer, index=False)
-        csv_buffer.seek(0)
-        
-        query = f"q='{FOLDER_ID}' in parents and name='{FILE_NAME}' and trashed=false"
-        results = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
-        files = results.get('files', [])
-        
-        media = MediaIoBaseUpload(csv_buffer, mimetype='text/csv', resumable=True)
-        
-        if files:
-            file_id = files[0]['id']
-            drive_service.files().update(
-                fileId=file_id,
-                media_body=media
-            ).execute()
-        else:
-            file_metadata = {
-                'name': FILE_NAME,
-                'parents': [FOLDER_ID]
-            }
-            drive_service.files().create(
-                body=file_metadata,
-                media_body=media,
-                fields='id'
-            ).execute()
-    except Exception as e:
-        st.error(f"Error al guardar en Google Drive: {e}")
+df_existente = cargar_datos_locales()
 
-st.title("📁 Monitoreo Predictivo")
-st.markdown("Registro de parámetros críticos sincronizado en tu carpeta de Google Drive")
-
-df_existente = cargar_datos_drive()
-
+# --- FORMULARIO DE CAPTURA ---
 with st.form("registro_form", clear_on_submit=True):
     st.subheader("➕ Nuevo Registro")
     
@@ -128,7 +47,7 @@ with st.form("registro_form", clear_on_submit=True):
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ], index=10)
     
-    col3, col4, col5 = st.columns(3)
+    col3, col4, col5 = st.columns3()
     with col3:
         temp = st.number_input("Temp (°C)", min_value=0.0, step=0.1, format="%.1f")
     with col4:
@@ -136,7 +55,7 @@ with st.form("registro_form", clear_on_submit=True):
     with col5:
         vib = st.number_input("Vibración", min_value=0.0, step=0.1, format="%.1f")
         
-    submitted = st.form_submit_button("Guardar Lectura en Drive")
+    submitted = st.form_submit_button("Guardar Lectura")
     
     if submitted:
         if linea and equipo:
@@ -152,15 +71,16 @@ with st.form("registro_form", clear_on_submit=True):
             }])
             
             df_actualizado = pd.concat([df_existente, nueva_fila], ignore_index=True)
-            guardar_datos_drive(df_actualizado)
+            guardar_datos_locales(df_actualizado)
             
-            st.success(f"¡Lectura guardada con éxito en tu carpeta de Drive para el equipo {equipo}!")
+            st.success(f"¡Lectura registrada con éxito para el equipo {equipo}!")
             st.rerun()
         else:
             st.error("Por favor completa la Línea y el Número de Equipo.")
 
 st.divider()
 
+# --- HISTÓRICO Y TENDENCIAS ---
 st.subheader("📊 Histórico de Equipos")
 
 if not df_existente.empty:
@@ -176,6 +96,17 @@ if not df_existente.empty:
 
     st.dataframe(df_filtrado, use_container_width=True)
     
+    # Botón para descargar el archivo CSV directamente cuando lo necesites
+    with open(DB_FILE, "rb") as file:
+        st.download_button(
+            label="📥 Descargar Base de Datos (CSV)",
+            data=file,
+            file_name="historial_predictivo.csv",
+            mime="text/csv"
+        )
+    
+    st.divider()
+    
     if 'Equipo' in df_existente.columns and not df_existente['Equipo'].dropna().empty:
         equipos_disponibles = df_existente['Equipo'].dropna().unique()
         equipo_seleccionado = st.selectbox("Ver tendencia histórica de:", equipos_disponibles)
@@ -186,4 +117,4 @@ if not df_existente.empty:
             if len(df_eq) > 1 and 'Mes' in df_existente.columns:
                 st.line_chart(df_eq.set_index('Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']])
 else:
-    st.info("Aún no hay registros en tu archivo de Drive. Haz tu primer registro arriba.")
+    st.info("Aún no hay registros en la base de datos. Haz tu primer registro arriba.")
