@@ -12,7 +12,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión blindada con limpieza automática de la llave PEM
+# Conexión con limpieza total y robusta de la llave privada
 @st.cache_resource
 def get_drive_service():
     try:
@@ -20,13 +20,11 @@ def get_drive_service():
             sec = st.secrets["gcp_service_account"]
             raw_key = sec.get("private_key", "")
             
-            # Limpieza profunda para asegurar formato PEM válido
-            clean_key = raw_key.strip()
-            if "\\n" in clean_key:
-                clean_key = clean_key.replace("\\n", "\n")
+            # Limpieza profunda para eliminar retornos de carro y normalizar saltos de línea
+            clean_key = raw_key.replace("\\n", "\n").replace("\r", "").strip()
 
             creds_info = {
-                "type": sec.get("type"),
+                "type": sec.get("type", "service_account"),
                 "project_id": sec.get("project_id"),
                 "private_key_id": sec.get("private_key_id"),
                 "private_key": clean_key,
