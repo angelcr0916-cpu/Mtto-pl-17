@@ -12,17 +12,24 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión limpia y directa con Google Drive usando los Secrets de Streamlit
+# Conexión limpia y blindada con Google Drive
 @st.cache_resource
 def get_drive_service():
     try:
         if "gcp_service_account" in st.secrets:
             sec = st.secrets["gcp_service_account"]
+            raw_key = sec.get("private_key", "")
+            
+            if "\\n" in raw_key:
+                formatted_key = raw_key.replace("\\n", "\n")
+            else:
+                formatted_key = raw_key
+
             creds_info = {
                 "type": sec.get("type"),
                 "project_id": sec.get("project_id"),
                 "private_key_id": sec.get("private_key_id"),
-                "private_key": sec.get("private_key"),
+                "private_key": formatted_key,
                 "client_email": sec.get("client_email"),
                 "client_id": sec.get("client_id"),
                 "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
