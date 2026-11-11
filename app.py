@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión blindada extrayendo los campos de forma segura
+# Conexión blindada con limpieza profunda de la llave privada
 def init_connection():
     scope = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -20,12 +20,15 @@ def init_connection():
     if "gcp_service_account" in st.secrets:
         sec = st.secrets["gcp_service_account"]
         
-        # Mapeo seguro campo por campo para evitar cualquier error de tipo o faltantes
+        # Limpieza robusta de la llave privada para corregir los saltos de línea
+        raw_key = sec.get("private_key", "")
+        formatted_key = raw_key.replace("\\n", "\n")
+        
         secrets_dict = {
             "type": sec.get("type", "service_account"),
             "project_id": sec.get("project_id"),
             "private_key_id": sec.get("private_key_id"),
-            "private_key": sec.get("private_key", "").replace("\\n", "\n"),
+            "private_key": formatted_key,
             "client_email": sec.get("client_email"),
             "client_id": sec.get("client_id"),
             "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
@@ -39,7 +42,7 @@ def init_connection():
         sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
         return sheet
     else:
-        st.warning("⚠️ Faltan configurar las credenciales [gcp_service_account] en los Secrets.")
+        st.warning("⚠️ Faltan configurar las credenciales en los Secrets de Streamlit.")
         return None
 
 st.title("⚡ Monitoreo Predictivo")
