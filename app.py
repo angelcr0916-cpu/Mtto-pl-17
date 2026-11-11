@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import json
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -10,7 +11,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión limpia y directa con gspread y google-auth
+# Conexión limpia y blindada con conversión segura a diccionario estándar
 def init_connection():
     scope = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -18,13 +19,12 @@ def init_connection():
     ]
     
     if "gcp_service_account" in st.secrets:
-        # Convertimos los secretos a un diccionario de Python estándar
-        secrets_dict = dict(st.secrets["gcp_service_account"])
+        # Convertimos de forma profunda el objeto de Streamlit a un diccionario estándar de Python
+        secrets_dict = json.loads(json.dumps(dict(st.secrets["gcp_service_account"])))
         
-        # Creamos las credenciales oficiales de Google
+        # Generamos las credenciales oficiales de Google
         creds = Credentials.from_service_account_info(secrets_dict, scopes=scope)
         
-        # Autorizamos con gspread
         client = gspread.authorize(creds)
         sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
         return sheet
