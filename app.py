@@ -1,25 +1,29 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
-import gspread
+import io
+from google.oauth2.service_account import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
 
 st.set_page_config(
-    page_title="Predictivo Mantenimiento",
-    page_icon="⚡",
+    page_title="Predictivo Mantenimiento - Drive",
+    page_icon="📁",
     layout="centered"
 )
 
-# Conexión limpia mediante archivo JSON temporal generado desde la tabla de secrets
-def init_connection():
+# Configuración de credenciales y cliente de Google Drive con tu ID de carpeta fijo
+@st.cache_resource
+def get_drive_service():
     if "gcp_service_account" in st.secrets:
         sec = st.secrets["gcp_service_account"]
+        raw_key = sec.get("private_key", "").replace("\\n", "\n")
         
-        secrets_dict = {
+        creds_dict = {
             "type": sec.get("type", "service_account"),
             "project_id": sec.get("project_id"),
             "private_key_id": sec.get("private_key_id"),
-            "private_key": sec.get("private_key", "").replace("\\n", "\n"),
+            "private_key": raw_key,
             "client_email": sec.get("client_email"),
             "client_id": sec.get("client_id"),
             "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
@@ -28,21 +32,85 @@ def init_connection():
             "client_x509_cert_url": sec.get("client_x509_cert_url")
         }
         
-        # Creamos el archivo JSON temporal para evitar cualquier bloqueo de tipos en la nube
-        with open("temp_service_account.json", "w") as f:
-            json.dump(secrets_dict, f)
+        scopes = ["https://www.googleapis.com/auth/drive"]
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+        service = build('drive', 'v3', credentials=creds)
+        return service
+    return None
+
+drive_service = get_drive_service()
+FOLDER_ID = "15T6wDRWDHQBKtFn_PUv00AccC9dujuv9r"
+FILE_NAME = "historial_predictivo.csv"
+
+# Función para leer el archivo CSV desde tu carpeta de Drive
+def cargar_datos_drive():
+    if not drive_service:
+        return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
+    
+    try:
+        query = f"q='{FOLDER_ID}' in parents and name='{FILE_NAME}' and trashed=false"
+        results = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+        files = results.get('files', [])
+        
+        if not files:
+            df_vacio = pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
+            guardar_datos_drive(df_vacio)
+            return df_vacio
+        
+        file_id = files[0]['id']
+        request = drive_service.files().get_media(fileId=file_id)
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while not done:
+            status, done = downloader.next_chunk()
             
-        client = gspread.service_account(filename="temp_service_account.json")
-        sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
-        return sheet
-    else:
-        st.warning("⚠️ Faltan configurar las credenciales [gcp_service_account] en los Secrets.")
-        return None
+        fh.seek(0)
+        return pd.read_csv(fh)
+    except Exception as e:
+        st.error(f"Error al leer de Google Drive: {e}")
+        return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
 
-st.title("⚡ Monitoreo Predictivo")
-st.markdown("Registro de parámetros críticos por equipo (Sincronizado en la Nube)")
+# Función para guardar el archivo CSV directamente en tu carpeta de Drive
+def guardar_datos_drive(df):
+    if not drive_service:
+        return
+    
+    try:
+        csv_buffer = io.BytesIO()
+        df.to_csv(csv_buffer, index=False)
+        csv_buffer.seek(0)
+        
+        query = f"q='{FOLDER_ID}' in parents and name='{FILE_NAME}' and trashed=false"
+        results = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+        files = results.get('files', [])
+        
+        media = MediaIoBaseUpload(csv_buffer, mimetype='text/csv', resumable=True)
+        
+        if files:
+            file_id = files[0]['id']
+            drive_service.files().update(
+                fileId=file_id,
+                media_body=media
+            ).execute()
+        else:
+            file_metadata = {
+                'name': FILE_NAME,
+                'parents': [FOLDER_ID]
+            }
+            drive_service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields='id'
+            ).execute()
+    except Exception as e:
+        st.error(f"Error al guardar en Google Drive: {e}")
 
-sheet = init_connection()
+# Interfaz de Usuario
+st.title("📁 Monitoreo Predictivo")
+st.markdown("Registro de parámetros críticos sincronizado en tu carpeta de Google Drive")
+
+df_existente = cargar_datos_drive()
 
 # --- FORMULARIO DE CAPTURA ---
 with st.form("registro_form", clear_on_submit=True):
@@ -67,47 +135,53 @@ with st.form("registro_form", clear_on_submit=True):
     with col5:
         vib = st.number_input("Vibración", min_value=0.0, step=0.1, format="%.1f")
         
-    submitted = st.form_submit_button("Guardar Lectura en la Nube")
+    submitted = st.form_submit_button("Guardar Lectura en Drive")
     
     if submitted:
-        if linea and equipo and sheet:
+        if linea and equipo:
             fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
-            sheet.append_row([fecha_actual, linea, equipo, mes, temp, amp, vib])
-            st.success(f"¡Lectura guardada con éxito para el equipo {equipo} en Google Sheets!")
+            nueva_fila = pd.DataFrame([{
+                "Fecha": fecha_actual,
+                "Línea": linea,
+                "Equipo": equipo,
+                "Mes": mes,
+                "Temperatura (°C)": temp,
+                "Amperaje (A)": amp,
+                "Vibración (mm/s)": vib
+            }])
+            
+            df_actualizado = pd.concat([df_existente, nueva_fila], ignore_index=True)
+            guardar_datos_drive(df_actualizado)
+            
+            st.success(f"¡Lectura guardada con éxito en tu carpeta de Drive para el equipo {equipo}!")
+            st.rerun()
         else:
             st.error("Por favor completa la Línea y el Número de Equipo.")
 
 st.divider()
 
-# --- HISTÓRICO DESDE GOOGLE SHEETS ---
+# --- HISTÓRICO ---
 st.subheader("📊 Histórico de Equipos")
 
-if sheet:
-    try:
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        
-        if not df.empty:
-            busqueda = st.text_input("🔍 Buscar equipo o línea...", "")
-            
-            if busqueda:
-                df_filtrado = df[df['Equipo'].astype(str).str.contains(busqueda, case=False, na=False) | 
-                                 df['Línea'].astype(str).str.contains(busqueda, case=False, na=False)]
-            else:
-                df_filtrado = df
+if not df_existente.empty:
+    busqueda = st.text_input("🔍 Buscar equipo o línea...", "")
+    
+    if busqueda:
+        df_filtrado = df_existente[df_existente['Equipo'].astype(str).str.contains(busqueda, case=False, na=False) | 
+                                     df_existente['Línea'].astype(str).str.contains(busqueda, case=False, na=False)]
+    else:
+        df_filtrado = df_existente
 
-            st.dataframe(df_filtrado, use_container_width=True)
-            
-            if 'Equipo' in df.columns:
-                equipos_disponibles = df['Equipo'].unique()
-                equipo_seleccionado = st.selectbox("Ver tendencia histórica de:", equipos_disponibles)
-                
-                if equipo_seleccionado:
-                    df_eq = df[df['Equipo'] == equipo_seleccionado]
-                    st.write(f"Tendencia para: **{equipo_seleccionado}**")
-                    if len(df_eq) > 1 and 'Mes' in df.columns:
-                        st.line_chart(df_eq.set_index('Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']])
-        else:
-            st.info("Tu Google Sheet está vacío. Haz tu primer registro arriba para comenzar.")
-    except Exception as e:
-        st.error(f"Error al cargar los datos de la hoja: {e}")
+    st.dataframe(df_filtrado, use_container_width=True)
+    
+    if 'Equipo' in df_existente.columns and not df_existente['Equipo'].dropna().empty:
+        equipos_disponibles = df_existente['Equipo'].dropna().unique()
+        equipo_seleccionado = st.selectbox("Ver tendencia histórica de:", equipos_disponibles)
+        
+        if equipo_seleccionado:
+            df_eq = df_existente[df_existente['Equipo'] == equipo_seleccionado]
+            st.write(f"Tendencia para: **{equipo_seleccionado}**")
+            if len(df_eq) > 1 and 'Mes' in df_existente.columns:
+                st.line_chart(df_eq.set_index('Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']])
+else:
+    st.info("Aún no hay registros en tu archivo de Drive. Haz tu primer registro arriba.")
