@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 
 st.set_page_config(
     page_title="Predictivo Mantenimiento",
@@ -10,15 +10,19 @@ st.set_page_config(
     layout="centered"
 )
 
-# Configuración de conexión a Google Sheets
+# Configuración de conexión a Google Sheets corregida
 def init_connection():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     
     if "gcp_service_account" in st.secrets:
+        # Cargamos los secretos como diccionario directo
         creds_dict = dict(st.secrets["gcp_service_account"])
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        
+        # Usamos google.oauth2 para evitar errores de codificación
+        creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
         client = gspread.authorize(creds)
-        sheet = client.open("Historial Predictivo Empresa").sheet1
+        
+        sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
         return sheet
     else:
         st.warning("⚠️ Faltan configurar las credenciales de Google Sheets en los Secrets de Streamlit.")
@@ -89,7 +93,7 @@ if sheet:
                 
                 if equipo_seleccionado:
                     df_eq = df[df['Equipo'] == equipo_seleccionado]
-                    st.write(f"Tendencia para: *{equipo_seleccionado}*")
+                    st.write(f"Tendencia para: **{equipo_seleccionado}**")
                     if len(df_eq) > 1 and 'Mes' in df.columns:
                         st.line_chart(df_eq.set_index('Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']])
         else:
