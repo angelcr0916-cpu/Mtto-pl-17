@@ -47,7 +47,7 @@ with st.form("registro_form", clear_on_submit=True):
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     ], index=10)
     
-    col3, col4, col5 = st.columns3()
+    col3, col4, col5 = st.columns(3)
     with col3:
         temp = st.number_input("Temp (°C)", min_value=0.0, step=0.1, format="%.1f")
     with col4:
