@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import io
-import base64
-import json
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload, MediaIoBaseDownload
@@ -14,25 +12,15 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión ultra blindada que reconstruye la llave privada de forma segura
 @st.cache_resource
 def get_drive_service():
     try:
         if "gcp_service_account" in st.secrets:
             sec = st.secrets["gcp_service_account"]
+            raw_key = sec.get("private_key", "")
             
-            # Armamos la llave privada asegurando que los saltos de línea sean reales y limpios
-            private_key_lines = [
-                "-----BEGIN PRIVATE KEY-----",
-                "MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYYwggSiAgEAAoIBAQDT03uzocC+V",
-                "NewteeCLX9H6Id+GsmyyNAuAiP2Yr15Y/2U1rc948GDfDLW1gQTuFp9ffJW6PzV9",
-                "nbzc4AmTIQt4B+Y9izPNZcInWwOcybJbRZDCW1hQTuFp9ffJW6PzV9nbzc4AmTIQt",
-                "4B+Y9izPNZcInWwOcybJbRZDViiHzR1t+08VGxKQbFAuAwwSfu8/",
-                "n1Kl1ylww8C4UxHBeNNd971TAYRwROOKl0Tbui1aHPd7R8cGiv4J7nDm/kix7n8",
-                "BCKmThEY1Vs=",
-                "-----END PRIVATE KEY-----"
-            ]
-            clean_key = "\n".join(private_key_lines)
+            # Soporta tanto saltos reales como literales por si acaso
+            clean_key = raw_key.replace("\\n", "\n").strip()
 
             creds_info = {
                 "type": sec.get("type", "service_account"),
@@ -59,7 +47,6 @@ drive_service = get_drive_service()
 FOLDER_ID = "15T6wDRWDHQBKtFn_PUv00AccC9dujuv9r"
 FILE_NAME = "historial_predictivo.csv"
 
-# Función para leer el archivo CSV desde tu carpeta de Drive
 def cargar_datos_drive():
     if not drive_service:
         return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
@@ -88,7 +75,6 @@ def cargar_datos_drive():
         st.error(f"Error al leer de Google Drive: {e}")
         return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
 
-# Función para guardar el archivo CSV directamente en tu carpeta de Drive
 def guardar_datos_drive(df):
     if not drive_service:
         return
@@ -123,13 +109,11 @@ def guardar_datos_drive(df):
     except Exception as e:
         st.error(f"Error al guardar en Google Drive: {e}")
 
-# Interfaz de Usuario
 st.title("📁 Monitoreo Predictivo")
 st.markdown("Registro de parámetros críticos sincronizado en tu carpeta de Google Drive")
 
 df_existente = cargar_datos_drive()
 
-# --- FORMULARIO DE CAPTURA ---
 with st.form("registro_form", clear_on_submit=True):
     st.subheader("➕ Nuevo Registro")
     
@@ -177,7 +161,6 @@ with st.form("registro_form", clear_on_submit=True):
 
 st.divider()
 
-# --- HISTÓRICO ---
 st.subheader("📊 Histórico de Equipos")
 
 if not df_existente.empty:
