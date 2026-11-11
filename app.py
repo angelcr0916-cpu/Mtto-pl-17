@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
 import io
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -13,7 +12,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión limpia leyendo los Secrets de Streamlit mediante un diccionario estructurado
+# Conexión limpia y directa con Google Drive usando los Secrets de Streamlit
 @st.cache_resource
 def get_drive_service():
     try:
@@ -23,7 +22,7 @@ def get_drive_service():
                 "type": sec.get("type"),
                 "project_id": sec.get("project_id"),
                 "private_key_id": sec.get("private_key_id"),
-                "private_key": sec.get("private_key").replace("\\n", "\n"),
+                "private_key": sec.get("private_key"),
                 "client_email": sec.get("client_email"),
                 "client_id": sec.get("client_id"),
                 "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
@@ -36,7 +35,7 @@ def get_drive_service():
             service = build('drive', 'v3', credentials=creds)
             return service
     except Exception as e:
-        st.error(f"Error al autenticar con Google Drive: {e}")
+        st.error(f"Error de autenticación con Google Drive: {e}")
         return None
 
 drive_service = get_drive_service()
