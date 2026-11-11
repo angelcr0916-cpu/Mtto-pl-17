@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -11,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión limpia y blindada con conversión segura a diccionario estándar
+# Conexión blindada mapeando explícitamente cada campo de los Secrets
 def init_connection():
     scope = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -19,8 +18,21 @@ def init_connection():
     ]
     
     if "gcp_service_account" in st.secrets:
-        # Convertimos de forma profunda el objeto de Streamlit a un diccionario estándar de Python
-        secrets_dict = json.loads(json.dumps(dict(st.secrets["gcp_service_account"])))
+        sec = st.secrets["gcp_service_account"]
+        
+        # Diccionario exacto mapeado uno a uno para evitar cualquier fallo de lectura
+        secrets_dict = {
+            "type": sec.get("type", "service_account"),
+            "project_id": sec.get("project_id"),
+            "private_key_id": sec.get("private_key_id"),
+            "private_key": sec.get("private_key").replace("\\n", "\n"),
+            "client_email": sec.get("client_email"),
+            "client_id": sec.get("client_id"),
+            "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
+            "token_uri": sec.get("token_uri", "https://oauth2.googleapis.com/token"),
+            "auth_provider_x509_cert_url": sec.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs"),
+            "client_x509_cert_url": sec.get("client_x509_cert_url")
+        }
         
         # Generamos las credenciales oficiales de Google
         creds = Credentials.from_service_account_info(secrets_dict, scopes=scope)
