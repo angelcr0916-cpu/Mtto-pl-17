@@ -12,31 +12,17 @@ st.set_page_config(
     layout="centered"
 )
 
-# Configuración de credenciales y cliente de Google Drive
+# Conexión directa mediante el archivo credentials.json en el repositorio
 @st.cache_resource
 def get_drive_service():
-    if "gcp_service_account" in st.secrets:
-        sec = st.secrets["gcp_service_account"]
-        raw_key = sec.get("private_key", "").replace("\\n", "\n")
-        
-        creds_info = {
-            "type": sec.get("type", "service_account"),
-            "project_id": sec.get("project_id"),
-            "private_key_id": sec.get("private_key_id"),
-            "private_key": raw_key,
-            "client_email": sec.get("client_email"),
-            "client_id": sec.get("client_id"),
-            "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
-            "token_uri": sec.get("token_uri", "https://oauth2.googleapis.com/token"),
-            "auth_provider_x509_cert_url": sec.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs"),
-            "client_x509_cert_url": sec.get("client_x509_cert_url")
-        }
-        
+    try:
         scopes = ["https://www.googleapis.com/auth/drive"]
-        creds = service_account.Credentials.from_service_account_info(creds_info, scopes=scopes)
+        creds = service_account.Credentials.from_service_account_file("credentials.json", scopes=scopes)
         service = build('drive', 'v3', credentials=creds)
         return service
-    return None
+    except Exception as e:
+        st.error(f"Error de autenticación con el archivo JSON: {e}")
+        return None
 
 drive_service = get_drive_service()
 FOLDER_ID = "15T6wDRWDHQBKtFn_PUv00AccC9dujuv9r"
