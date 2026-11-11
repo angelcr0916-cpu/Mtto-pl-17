@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import json
 import gspread
-from google.oauth2.service_account import Credentials
 
 st.set_page_config(
     page_title="Predictivo Mantenimiento",
@@ -10,34 +10,33 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión directa, limpia y blindada con Credentials
+# Conexión limpia mediante archivo JSON temporal generado desde la tabla de secrets
 def init_connection():
-    scope = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    
-    if "client_email" in st.secrets:
+    if "gcp_service_account" in st.secrets:
+        sec = st.secrets["gcp_service_account"]
+        
         secrets_dict = {
-            "type": st.secrets.get("type", "service_account"),
-            "project_id": st.secrets.get("project_id"),
-            "private_key_id": st.secrets.get("private_key_id"),
-            "private_key": st.secrets.get("private_key", "").replace("\\n", "\n"),
-            "client_email": st.secrets.get("client_email"),
-            "client_id": st.secrets.get("client_id"),
-            "auth_uri": st.secrets.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
-            "token_uri": st.secrets.get("token_uri", "https://oauth2.googleapis.com/token"),
-            "auth_provider_x509_cert_url": st.secrets.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs"),
-            "client_x509_cert_url": st.secrets.get("client_x509_cert_url")
+            "type": sec.get("type", "service_account"),
+            "project_id": sec.get("project_id"),
+            "private_key_id": sec.get("private_key_id"),
+            "private_key": sec.get("private_key", "").replace("\\n", "\n"),
+            "client_email": sec.get("client_email"),
+            "client_id": sec.get("client_id"),
+            "auth_uri": sec.get("auth_uri", "https://accounts.google.com/o/oauth2/auth"),
+            "token_uri": sec.get("token_uri", "https://oauth2.googleapis.com/token"),
+            "auth_provider_x509_cert_url": sec.get("auth_provider_x509_cert_url", "https://www.googleapis.com/oauth2/v1/certs"),
+            "client_x509_cert_url": sec.get("client_x509_cert_url")
         }
         
-        # Autorización directa con Credentials y gspread
-        creds = Credentials.from_service_account_info(secrets_dict, scopes=scope)
-        client = gspread.authorize(creds)
+        # Creamos el archivo JSON temporal para evitar cualquier bloqueo de tipos en la nube
+        with open("temp_service_account.json", "w") as f:
+            json.dump(secrets_dict, f)
+            
+        client = gspread.service_account(filename="temp_service_account.json")
         sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
         return sheet
     else:
-        st.warning("⚠️ Faltan configurar las credenciales en los Secrets de Streamlit.")
+        st.warning("⚠️ Faltan configurar las credenciales [gcp_service_account] en los Secrets.")
         return None
 
 st.title("⚡ Monitoreo Predictivo")
