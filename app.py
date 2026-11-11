@@ -1,8 +1,8 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-import json
 import gspread
+from google.oauth2.service_account import Credentials
 
 st.set_page_config(
     page_title="Predictivo Mantenimiento",
@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# Conexión blindada definitiva mediante archivo JSON temporal
+# Conexión directa, limpia y blindada con Credentials
 def init_connection():
     scope = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -31,12 +31,9 @@ def init_connection():
             "client_x509_cert_url": st.secrets.get("client_x509_cert_url")
         }
         
-        # Creamos un archivo JSON temporal en el servidor con las credenciales limpias
-        with open("temp_service_account.json", "w") as f:
-            json.dump(secrets_dict, f)
-            
-        # gspread lee el archivo temporal directamente sin errores de tipo
-        client = gspread.service_account(filename="temp_service_account.json")
+        # Autorización directa con Credentials y gspread
+        creds = Credentials.from_service_account_info(secrets_dict, scopes=scope)
+        client = gspread.authorize(creds)
         sheet = client.open("HISTORIAL PREDICTIVO EMPRESA").sheet1
         return sheet
     else:
