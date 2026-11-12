@@ -152,7 +152,6 @@ if modo == "🧵 Cuerda":
                 df_eq_c = df_eq_c.sort_values('Fecha')
                 df_eq_c['Evolución_Mes'] = df_eq_c['Mes'] + " (" + df_eq_c['Fecha'].astype(str).str[:10] + ")"
                 
-                # Validar si es extrusor con zonas o equipo estándar
                 if "extrusor" in eq_sel_c.lower() or "ext" in eq_sel_c.upper():
                     df_pivot_c = df_eq_c.pivot_table(index='Evolución_Mes', columns='Zona', values='Temperatura (°C)')
                     st.line_chart(df_pivot_c)
@@ -170,7 +169,6 @@ if modo == "🧵 Cuerda":
         if pin_c == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            # Líneas de Cuerda
             st.markdown("### 🧵 Administrar Líneas de Cuerda")
             st.write("Líneas actuales:", lineas_cuerda)
             nueva_l_c = st.text_input("Agregar nueva Línea de Cuerda", placeholder="Ej. Cuerda 4")
@@ -189,10 +187,9 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
             st.markdown("---")
-            # Equipos de Cuerda
             st.markdown("### ⚙️ Administrar Equipos / Elementos / Extrusores de Cuerda")
             st.write("Equipos actuales:", equipos_cuerda)
-            nuevo_eq_c = st.text_input("Agregar nuevo Equipo (ej. Motor Secundario o EXT-02)", placeholder="Ej. Extrusor 2 o EXT-02")
+            nuevo_eq_c = st.text_input("Agregar nuevo Equipo", placeholder="Ej. Extrusor 2 o EXT-02")
             if st.button("➕ Agregar Equipo / Extrusor"):
                 if nuevo_eq_c and nuevo_eq_c not in equipos_cuerda:
                     equipos_cuerda.append(nuevo_eq_c)
@@ -343,7 +340,8 @@ else:
                     st.rerun()
 
             linea_a_quitar_p = st.selectbox("Eliminar Línea de Perfilería", ["Selecciona..."] + lineas_perf)
-            if st.button("❌ Quitar Línea de Perfilería seleccionada") && linea_a_quitar_p != "Selecciona...":
+            # CORREGIDO AQUÍ: Se cambió && por and
+            if st.button("❌ Quitar Línea de Perfilería seleccionada") and linea_a_quitar_p != "Selecciona...":
                 lineas_perf.remove(linea_a_quitar_p)
                 guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
                 st.success("Línea eliminada.")
