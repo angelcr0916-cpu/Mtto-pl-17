@@ -19,7 +19,6 @@ PERF_FILE = "historial_perfileria.csv"
 ZONAS_PERF_FILE = "zonas_config.csv"
 LINEAS_PERF_FILE = "lineas_perf_config.csv"
 LINEAS_CUERDA_FILE = "lineas_cuerda_config.csv"
-EQUIPOS_CUERDA_FILE = "equipos_cuerda_config.csv"
 
 # --- FUNCIONES DE CONFIGURACIÓN DINÁMICA ---
 def cargar_config(file_path, default_list, col_name):
@@ -36,7 +35,6 @@ def cargar_config(file_path, default_list, col_name):
 def guardar_config(file_path, lista, col_name):
     pd.DataFrame({col_name: lista}).to_csv(file_path, index=False)
 
-# Datos de Cuerda (Soporta general y extrusores con zonas)
 def cargar_datos_cuerda():
     if os.path.exists(CUERDA_FILE):
         try:
@@ -48,7 +46,6 @@ def cargar_datos_cuerda():
 def guardar_datos_cuerda(df):
     df.to_csv(CUERDA_FILE, index=False)
 
-# Datos de Perfilería
 def cargar_datos_perfileria():
     if os.path.exists(PERF_FILE):
         try:
@@ -66,7 +63,6 @@ st.title("🔒 Monitoreo Predictivo Integral")
 modo = st.sidebar.radio("Seleccionar Módulo:", ["🧵 Cuerda", "🏭 Perfilería (Extrusión / Zonas)"])
 
 lineas_cuerda = cargar_config(LINEAS_CUERDA_FILE, ["Cuerda 1", "Cuerda 2", "Cuerda 3"], "Linea")
-equipos_cuerda = cargar_config(EQUIPOS_CUERDA_FILE, ["Motor Principal", "Bomba", "Extrusor 1", "EXT-01"], "Equipo")
 lineas_perf = cargar_config(LINEAS_PERF_FILE, ["Perfilería 1", "Perfilería 2", "Perfilería 3"], "Linea")
 zonas_perf = cargar_config(ZONAS_PERF_FILE, ["Cañón 1", "Cañón 2", "Cañón 3", "Zona 1", "Zona 2", "Zona 3", "Zona 4"], "Zona")
 
@@ -81,16 +77,18 @@ if modo == "🧵 Cuerda":
         with col1:
             linea_c = st.selectbox("Línea de Cuerda", lineas_cuerda)
         with col2:
-            equipo_c = st.selectbox("Equipo / Elemento", equipos_cuerda, help="Si escribes o seleccionas un equipo que contenga 'extrusor' o 'EXT', te pedirá zonas térmicas automáticamente.")
+            # CAMBIADO A TEXT_INPUT LIBRE PARA ESCRIBIR EXT-01, EXTRUSOR, MOTOR, ETC. AL INSTANTE
+            equipo_c = st.text_input("Nombre de Equipo / Elemento", placeholder="Ej. Motor Principal o EXT-01")
             
         mes_c = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10)
         
-        # Detección automática inteligente si es extrusor o código EXT
-        es_extrusor = "extrusor" in equipo_c.lower() or "ext" in equipo_c.upper()
+        # Detección inteligente mejorada (si contiene 'ext' o 'extrusor')
+        eq_clean = equipo_c.strip().lower()
+        es_extrusor = "ext" in eq_clean or "extrusor" in eq_clean
         
         capturas_cuerda = {}
         if es_extrusor:
-            st.info(f"💡 Equipo detectado como Extrusor/EXT. Ingresa las temperaturas de zona ({len(zonas_perf)} zonas activas):")
+            st.info(f"💡 Detectado como **Extrusor / EXT**. Ingresa las temperaturas de zona ({len(zonas_perf)} zonas activas):")
             cols_zc = st.columns(3)
             for idx, zona in enumerate(zonas_perf):
                 with cols_zc[idx % 3]:
@@ -152,7 +150,7 @@ if modo == "🧵 Cuerda":
                 df_eq_c = df_eq_c.sort_values('Fecha')
                 df_eq_c['Evolución_Mes'] = df_eq_c['Mes'] + " (" + df_eq_c['Fecha'].astype(str).str[:10] + ")"
                 
-                if "extrusor" in eq_sel_c.lower() or "ext" in eq_sel_c.upper():
+                if "ext" in eq_sel_c.lower() or "extrusor" in eq_sel_c.lower():
                     df_pivot_c = df_eq_c.pivot_table(index='Evolución_Mes', columns='Zona', values='Temperatura (°C)')
                     st.line_chart(df_pivot_c)
                 else:
@@ -162,8 +160,8 @@ if modo == "🧵 Cuerda":
     st.divider()
 
     # --- ZONA DE CONFIGURACIÓN DE CUERDA (PROTEGIDA CON PIN) ---
-    with st.expander("🛠️ Configurar Líneas, Equipos y Borrado de Cuerda (Protegido con PIN)"):
-        st.markdown("Ingresa tu PIN de 4 dígitos para **agregar o quitar líneas y equipos de Cuerda**.")
+    with st.expander("🛠️ Configurar Líneas y Borrado de Cuerda (Protegido con PIN)"):
+        st.markdown("Ingresa tu PIN de 4 dígitos para **administrar líneas o borrar registros**.")
         pin_c = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_c")
         
         if pin_c == PIN_SEGURIDAD:
@@ -187,24 +185,6 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
             st.markdown("---")
-            st.markdown("### ⚙️ Administrar Equipos / Elementos / Extrusores de Cuerda")
-            st.write("Equipos actuales:", equipos_cuerda)
-            nuevo_eq_c = st.text_input("Agregar nuevo Equipo", placeholder="Ej. Extrusor 2 o EXT-02")
-            if st.button("➕ Agregar Equipo / Extrusor"):
-                if nuevo_eq_c and nuevo_eq_c not in equipos_cuerda:
-                    equipos_cuerda.append(nuevo_eq_c)
-                    guardar_config(EQUIPOS_CUERDA_FILE, equipos_cuerda, "Equipo")
-                    st.success("¡Equipo añadido!")
-                    st.rerun()
-
-            del_eq_c = st.selectbox("Eliminar Equipo existente", ["Selecciona..."] + equipos_cuerda, key="del_eqc")
-            if st.button("❌ Quitar Equipo seleccionado") and del_eq_c != "Selecciona...":
-                equipos_cuerda.remove(del_eq_c)
-                guardar_config(EQUIPOS_CUERDA_FILE, equipos_cuerda, "Equipo")
-                st.success("Equipo eliminado.")
-                st.rerun()
-
-            st.markdown("---")
             st.markdown("### 🗑️ Borrar Registros de Cuerda")
             if not df_cuerda.empty:
                 df_cuerda['Identificador'] = "Fila " + df_cuerda.index.astype(str) + " | " + df_cuerda['Línea'].astype(str) + " | " + df_cuerda['Equipo'].astype(str) + " | " + df_cuerda['Mes'].astype(str)
@@ -219,7 +199,7 @@ if modo == "🧵 Cuerda":
         elif pin_c != "":
             st.error("❌ PIN incorrecto.")
         else:
-            st.info("💡 Ingresa el PIN para desbloquear la gestión de Cuerda.")
+            st.info("💡 Ingresa el PIN para desbloquear la gestión.")
 
 else:
     # --- MÓDULO DE PERFILERÍA ---
@@ -340,7 +320,6 @@ else:
                     st.rerun()
 
             linea_a_quitar_p = st.selectbox("Eliminar Línea de Perfilería", ["Selecciona..."] + lineas_perf)
-            # CORREGIDO AQUÍ: Se cambió && por and
             if st.button("❌ Quitar Línea de Perfilería seleccionada") and linea_a_quitar_p != "Selecciona...":
                 lineas_perf.remove(linea_a_quitar_p)
                 guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
