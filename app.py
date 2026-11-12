@@ -9,7 +9,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# PIN de seguridad de 4 dígitos para modificaciones/borrados (puedes cambiarlo aquí cuando quieras)
+# PIN de seguridad de 4 dígitos para modificaciones/borrados
 PIN_SEGURIDAD = "2026"
 
 # Archivo CSV local donde se acumulan las lecturas mes con mes
@@ -183,7 +183,8 @@ if not df_existente.empty:
             st.write(f"Mostrando historial evolutivo para: **{equipo_seleccionado}**")
             
             if len(df_eq) > 0:
-                df_eq['Evolución_Mes'] = df_eq['Mes'] + " (" + df_eq['Fecha'].astype(str).str.sub(0, 10) + ")"
+                # Corregido aquí usando [:10] en lugar de .str.sub
+                df_eq['Evolución_Mes'] = df_eq['Mes'] + " (" + df_eq['Fecha'].astype(str).str[:10] + ")"
                 
                 chart_data = df_eq.set_index('Evolución_Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']]
                 st.line_chart(chart_data)
