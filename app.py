@@ -77,12 +77,10 @@ if modo == "🧵 Cuerda":
         with col1:
             linea_c = st.selectbox("Línea de Cuerda", lineas_cuerda)
         with col2:
-            # CAMBIADO A TEXT_INPUT LIBRE PARA ESCRIBIR EXT-01, EXTRUSOR, MOTOR, ETC. AL INSTANTE
             equipo_c = st.text_input("Nombre de Equipo / Elemento", placeholder="Ej. Motor Principal o EXT-01")
             
         mes_c = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10)
         
-        # Detección inteligente mejorada (si contiene 'ext' o 'extrusor')
         eq_clean = equipo_c.strip().lower()
         es_extrusor = "ext" in eq_clean or "extrusor" in eq_clean
         
@@ -160,13 +158,33 @@ if modo == "🧵 Cuerda":
     st.divider()
 
     # --- ZONA DE CONFIGURACIÓN DE CUERDA (PROTEGIDA CON PIN) ---
-    with st.expander("🛠️ Configurar Líneas y Borrado de Cuerda (Protegido con PIN)"):
-        st.markdown("Ingresa tu PIN de 4 dígitos para **administrar líneas o borrar registros**.")
+    with st.expander("🛠️ Configurar Líneas, Cañones/Zonas y Borrado de Cuerda (Protegido con PIN)"):
+        st.markdown("Ingresa tu PIN de 4 dígitos para **administrar líneas, zonas de extrusores o borrar registros**.")
         pin_c = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_c")
         
         if pin_c == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
+            # 1. Administrar Cañones y Zonas también en Cuerda
+            st.markdown("### 🌡️ Administrar Cañones y Zonas Térmicas (Extrusores)")
+            st.write("Zonas actuales activas:", zonas_perf)
+            nueva_zona_c = st.text_input("Escribe el nuevo cañón o zona", placeholder="Ej. Cañón 4, Zona 5", key="nz_c")
+            if st.button("➕ Agregar Cañón / Zona en Cuerda"):
+                if nueva_zona_c and nueva_zona_c not in zonas_perf:
+                    zonas_perf.append(nueva_zona_c)
+                    guardar_config(ZONAS_PERF_FILE, zonas_perf, "Zona")
+                    st.success("¡Zona agregada exitosamente!")
+                    st.rerun()
+
+            zona_a_quitar_c = st.selectbox("Eliminar Cañón o Zona", ["Selecciona..."] + zonas_perf, key="zq_c")
+            if st.button("❌ Quitar Zona seleccionada en Cuerda") and zona_a_quitar_c != "Selecciona...":
+                zonas_perf.remove(zona_a_quitar_c)
+                guardar_config(ZONAS_PERF_FILE, zonas_perf, "Zona")
+                st.success("Zona eliminada.")
+                st.rerun()
+
+            st.markdown("---")
+            # 2. Líneas de Cuerda
             st.markdown("### 🧵 Administrar Líneas de Cuerda")
             st.write("Líneas actuales:", lineas_cuerda)
             nueva_l_c = st.text_input("Agregar nueva Línea de Cuerda", placeholder="Ej. Cuerda 4")
@@ -185,6 +203,7 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
             st.markdown("---")
+            # 3. Borrar Registros
             st.markdown("### 🗑️ Borrar Registros de Cuerda")
             if not df_cuerda.empty:
                 df_cuerda['Identificador'] = "Fila " + df_cuerda.index.astype(str) + " | " + df_cuerda['Línea'].astype(str) + " | " + df_cuerda['Equipo'].astype(str) + " | " + df_cuerda['Mes'].astype(str)
