@@ -16,7 +16,6 @@ PIN_SEGURIDAD = "2026"
 CUERDA_FILE = "historial_cuerda.csv"
 PERF_FILE = "historial_perfileria.csv"
 
-# Configuración persistente en CSV para Cuerda y Perfilería
 ZONAS_PERF_FILE = "zonas_config.csv"
 LINEAS_PERF_FILE = "lineas_perf_config.csv"
 LINEAS_CUERDA_FILE = "lineas_cuerda_config.csv"
@@ -37,14 +36,14 @@ def cargar_config(file_path, default_list, col_name):
 def guardar_config(file_path, lista, col_name):
     pd.DataFrame({col_name: lista}).to_csv(file_path, index=False)
 
-# Datos de Cuerda
+# Datos de Cuerda (Soporta general y extrusores con zonas)
 def cargar_datos_cuerda():
     if os.path.exists(CUERDA_FILE):
         try:
             return pd.read_csv(CUERDA_FILE)
         except Exception:
             pass
-    return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
+    return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Tipo", "Zona", "Temperatura (°C)", "Amperaje (A)", "Vibración (mm/s)"])
 
 def guardar_datos_cuerda(df):
     df.to_csv(CUERDA_FILE, index=False)
@@ -64,12 +63,10 @@ def guardar_datos_perfileria(df):
 # --- INTERFAZ PRINCIPAL ---
 st.title("🔒 Monitoreo Predictivo Integral")
 
-# Menú lateral actualizado con "Cuerda" en lugar de Monitoreo General
 modo = st.sidebar.radio("Seleccionar Módulo:", ["🧵 Cuerda", "🏭 Perfilería (Extrusión / Zonas)"])
 
-# Listas configurables cargadas
 lineas_cuerda = cargar_config(LINEAS_CUERDA_FILE, ["Cuerda 1", "Cuerda 2", "Cuerda 3"], "Linea")
-equipos_cuerda = cargar_config(EQUIPOS_CUERDA_FILE, ["Motor Principal", "Bomba", "Extrusora Cuerda"], "Equipo")
+equipos_cuerda = cargar_config(EQUIPOS_CUERDA_FILE, ["Motor Principal", "Bomba", "Extrusor 1", "EXT-01"], "Equipo")
 lineas_perf = cargar_config(LINEAS_PERF_FILE, ["Perfilería 1", "Perfilería 2", "Perfilería 3"], "Linea")
 zonas_perf = cargar_config(ZONAS_PERF_FILE, ["Cañón 1", "Cañón 2", "Cañón 3", "Zona 1", "Zona 2", "Zona 3", "Zona 4"], "Zona")
 
@@ -84,32 +81,50 @@ if modo == "🧵 Cuerda":
         with col1:
             linea_c = st.selectbox("Línea de Cuerda", lineas_cuerda)
         with col2:
-            equipo_c = st.selectbox("Equipo / Elemento", equipos_cuerda)
+            equipo_c = st.selectbox("Equipo / Elemento", equipos_cuerda, help="Si escribes o seleccionas un equipo que contenga 'extrusor' o 'EXT', te pedirá zonas térmicas automáticamente.")
             
         mes_c = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10)
         
-        col3, col4, col5 = st.columns(3)
-        with col3:
-            temp_c = st.number_input("Temp (°C)", min_value=0.0, step=0.1, format="%.1f")
-        with col4:
-            amp_c = st.number_input("Amp (A)", min_value=0.0, step=0.1, format="%.1f")
-        with col5:
-            vib_c = st.number_input("Vibración", min_value=0.0, step=0.1, format="%.1f")
+        # Detección automática inteligente si es extrusor o código EXT
+        es_extrusor = "extrusor" in equipo_c.lower() or "ext" in equipo_c.upper()
+        
+        capturas_cuerda = {}
+        if es_extrusor:
+            st.info(f"💡 Equipo detectado como Extrusor/EXT. Ingresa las temperaturas de zona ({len(zonas_perf)} zonas activas):")
+            cols_zc = st.columns(3)
+            for idx, zona in enumerate(zonas_perf):
+                with cols_zc[idx % 3]:
+                    capturas_cuerda[zona] = st.number_input(f"{zona} (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"zc_{zona}")
+        else:
+            st.info("💡 Equipo estándar detectado (Motor, Ventilador, Soplador, etc.).")
+            col3, col4, col5 = st.columns(3)
+            with col3:
+                capturas_cuerda["Temp"] = st.number_input("Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key="sc_temp")
+            with col4:
+                capturas_cuerda["Amp"] = st.number_input("Amp (A)", min_value=0.0, step=0.1, format="%.1f", key="sc_amp")
+            with col5:
+                capturas_cuerda["Vib"] = st.number_input("Vibración", min_value=0.0, step=0.1, format="%.1f", key="sc_vib")
             
         submitted_c = st.form_submit_button("Guardar Medición de Cuerda")
         if submitted_c:
             if linea_c and equipo_c:
                 fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
-                nueva_fila = pd.DataFrame([{
-                    "Fecha": fecha_actual,
-                    "Línea": linea_c,
-                    "Equipo": equipo_c,
-                    "Mes": mes_c,
-                    "Temperatura (°C)": temp_c,
-                    "Amperaje (A)": amp_c,
-                    "Vibración (mm/s)": vib_c
-                }])
-                df_act_c = pd.concat([df_cuerda, nueva_fila], ignore_index=True)
+                filas_nuevas_c = []
+                
+                if es_extrusor:
+                    for zona, val in capturas_cuerda.items():
+                        filas_nuevas_c.append({
+                            "Fecha": fecha_actual, "Línea": linea_c, "Equipo": equipo_c, "Mes": mes_c,
+                            "Tipo": "Extrusor (Zonas)", "Zona": zona, "Temperatura (°C)": val, "Amperaje (A)": 0.0, "Vibración (mm/s)": 0.0
+                        })
+                else:
+                    filas_nuevas_c.append({
+                        "Fecha": fecha_actual, "Línea": linea_c, "Equipo": equipo_c, "Mes": mes_c,
+                        "Tipo": "Estándar", "Zona": "General", "Temperatura (°C)": capturas_cuerda.get("Temp", 0.0),
+                        "Amperaje (A)": capturas_cuerda.get("Amp", 0.0), "Vibración (mm/s)": capturas_cuerda.get("Vib", 0.0)
+                    })
+                    
+                df_act_c = pd.concat([df_cuerda, pd.DataFrame(filas_nuevas_c)], ignore_index=True)
                 guardar_datos_cuerda(df_act_c)
                 st.success(f"¡Medición guardada para **{equipo_c}** en **{linea_c}**!")
                 st.rerun()
@@ -128,17 +143,22 @@ if modo == "🧵 Cuerda":
             
         st.dataframe(df_c_filt, use_container_width=True)
         
-        # Gráfica de evolución mensual en Cuerda
-        st.subheader("📉 Tendencia Evolutiva por Equipo (Mes a Mes)")
+        st.subheader("📉 Tendencia Evolutiva (Mes a Mes)")
         eqs_c = df_cuerda['Equipo'].dropna().unique()
         if len(eqs_c) > 0:
-            eq_sel_c = st.selectbox("Selecciona equipo de cuerda:", eqs_c)
+            eq_sel_c = st.selectbox("Selecciona equipo o extrusor de cuerda:", eqs_c)
             df_eq_c = df_cuerda[df_cuerda['Equipo'] == eq_sel_c].copy()
             if 'Fecha' in df_eq_c.columns:
                 df_eq_c = df_eq_c.sort_values('Fecha')
-                df_eq_c['Evolución_Mes'] = df_eq_c['Mes'] + " (" + df_eq['Fecha'].astype(str).str[:10] + ")"
-                chart_data_c = df_eq_c.set_index('Evolución_Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']]
-                st.line_chart(chart_data_c)
+                df_eq_c['Evolución_Mes'] = df_eq_c['Mes'] + " (" + df_eq_c['Fecha'].astype(str).str[:10] + ")"
+                
+                # Validar si es extrusor con zonas o equipo estándar
+                if "extrusor" in eq_sel_c.lower() or "ext" in eq_sel_c.upper():
+                    df_pivot_c = df_eq_c.pivot_table(index='Evolución_Mes', columns='Zona', values='Temperatura (°C)')
+                    st.line_chart(df_pivot_c)
+                else:
+                    chart_data_c = df_eq_c.set_index('Evolución_Mes')[['Temperatura (°C)', 'Amperaje (A)', 'Vibración (mm/s)']]
+                    st.line_chart(chart_data_c)
 
     st.divider()
 
@@ -170,10 +190,10 @@ if modo == "🧵 Cuerda":
 
             st.markdown("---")
             # Equipos de Cuerda
-            st.markdown("### ⚙️ Administrar Equipos / Elementos de Cuerda")
+            st.markdown("### ⚙️ Administrar Equipos / Elementos / Extrusores de Cuerda")
             st.write("Equipos actuales:", equipos_cuerda)
-            nuevo_eq_c = st.text_input("Agregar nuevo Equipo / Elemento", placeholder="Ej. Motor Secundario")
-            if st.button("➕ Agregar Equipo"):
+            nuevo_eq_c = st.text_input("Agregar nuevo Equipo (ej. Motor Secundario o EXT-02)", placeholder="Ej. Extrusor 2 o EXT-02")
+            if st.button("➕ Agregar Equipo / Extrusor"):
                 if nuevo_eq_c and nuevo_eq_c not in equipos_cuerda:
                     equipos_cuerda.append(nuevo_eq_c)
                     guardar_config(EQUIPOS_CUERDA_FILE, equipos_cuerda, "Equipo")
@@ -277,7 +297,7 @@ else:
             
             if 'Fecha' in df_eq_p.columns:
                 df_eq_p = df_eq_p.sort_values('Fecha')
-                df_eq_p['Evolución_Mes'] = df_eq_p['Mes'] + " (" + df_eq['Fecha'].astype(str).str[:10] + ")"
+                df_eq_p['Evolución_Mes'] = df_eq_p['Mes'] + " (" + df_eq_p['Fecha'].astype(str).str[:10] + ")"
                 
                 df_pivot = df_eq_p.pivot_table(index='Evolución_Mes', columns='Zona', values='Temperatura (°C)')
                 st.line_chart(df_pivot)
@@ -323,7 +343,7 @@ else:
                     st.rerun()
 
             linea_a_quitar_p = st.selectbox("Eliminar Línea de Perfilería", ["Selecciona..."] + lineas_perf)
-            if st.button("❌ Quitar Línea de Perfilería seleccionada") and linea_a_quitar_p != "Selecciona...":
+            if st.button("❌ Quitar Línea de Perfilería seleccionada") && linea_a_quitar_p != "Selecciona...":
                 lineas_perf.remove(linea_a_quitar_p)
                 guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
                 st.success("Línea eliminada.")
