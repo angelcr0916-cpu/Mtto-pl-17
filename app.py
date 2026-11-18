@@ -60,7 +60,7 @@ equipos_cuerda = cargar_config(EQUIPOS_CUERDA_FILE, ["Extrusora 17", "Extrusora 
 embobinadoras_cuerda = cargar_config(EMBOB_CUERDA_FILE, ["Embobinadora 1", "Embobinadora 2"], "Embobinadora")
 subsistemas_cuerda = cargar_config(SUBSISTEMAS_CUERDA_FILE, ["Motor extrusor", "Godet 1", "Godet 2", "Bomba de engranes", "Extractor", "Secador", "Mezcladora", "Soplador"], "Subsistema")
 
-# Actualizado con las opciones solicitadas por defecto para Perfilería
+# Opciones actualizadas forzadas para Perfilería
 lineas_perf = cargar_config(LINEAS_PERF_FILE, ["PPR", "CPVC", "PVC", "Tubo hidráulico", "Tubo de estante"], "Linea")
 ext_perf = cargar_config(EXT_PERF_FILE, ["Extrusora 43", "Extrusora 44", "Extrusora 45"], "Extrusora")
 zonas_perf = cargar_config(ZONAS_PERF_FILE, ["Z1", "Z2", "Z3", "Z4"], "Zona")
@@ -291,7 +291,12 @@ else:
         if pin_p == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            # Editar Tipos de Sistema / Líneas Perfilería
+            # --- SECCIÓN PARA REEMPLAZAR O FORZAR LA LISTA NUEVA SI PERSISTE EL CACHÉ ---
+            if st.button("🔄 Restablecer lista por defecto (PPR, CPVC, PVC, etc.)"):
+                guardar_config(LINEAS_PERF_FILE, ["PPR", "CPVC", "PVC", "Tubo hidráulico", "Tubo de estante"], "Linea")
+                st.success("¡Lista restablecida con éxito! Recarga la página.")
+                st.rerun()
+
             sys_ed = st.selectbox("Editar Sistema / Línea Perf", lineas_perf, key="syse")
             n_sys = st.text_input("Nuevo nombre de sistema", value=sys_ed, key="nsyse")
             if st.button("💾 Guardar Sistema Perf"):
@@ -299,7 +304,6 @@ else:
                 guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
                 st.rerun()
 
-            # Agregar nuevo Sistema / Línea
             nuevo_sys = st.text_input("Agregar nuevo Sistema / Línea", placeholder="Ej. Nuevo material")
             if st.button("➕ Agregar Sistema Perf"):
                 if nuevo_sys and nuevo_sys not in lineas_perf:
@@ -308,7 +312,6 @@ else:
                     st.success("¡Sistema añadido!")
                     st.rerun()
 
-            # Editar Extrusoras Perfilería
             ext_ed = st.selectbox("Editar Extrusora Perfilería", ext_perf, key="exte")
             n_ext = st.text_input("Nuevo nombre extrusora", value=ext_ed, key="nexte")
             if st.button("💾 Guardar Extrusora Perf"):
