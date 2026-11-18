@@ -9,21 +9,26 @@ st.set_page_config(
     layout="centered"
 )
 
-# PIN de seguridad de 4 dígitos para modificaciones/borrados/configuración
 PIN_SEGURIDAD = "2026"
 
-# Archivos locales de datos y configuración
+# Archivos de datos y configuración
 CUERDA_FILE = "historial_cuerda_detallado.csv"
-PERF_FILE = "historial_perfileria.csv"
+PERF_FILE = "historial_perfileria_detallado.csv"
 
-ZONAS_PERF_FILE = "zonas_config.csv"
-LINEAS_PERF_FILE = "lineas_perf_config.csv"
+# Configuración Cuerda
 LINEAS_CUERDA_FILE = "lineas_cuerda_config.csv"
 EQUIPOS_CUERDA_FILE = "equipos_cuerda_config.csv"
 EMBOB_CUERDA_FILE = "embobinadoras_config.csv"
 SUBSISTEMAS_CUERDA_FILE = "subsistemas_config.csv"
 
-# --- FUNCIONES DE CONFIGURACIÓN DINÁMICA ---
+# Configuración Perfilería
+LINEAS_PERF_FILE = "lineas_perf_config.csv"
+EXT_PERF_FILE = "ext_perf_config.csv"
+ZONAS_PERF_FILE = "zonas_perf_config.csv"
+MOLDES_PERF_FILE = "moldes_perf_config.csv"
+TINAS_PERF_FILE = "tinas_perf_config.csv"
+GENERAL_PERF_FILE = "general_perf_config.csv"
+
 def cargar_config(file_path, default_list, col_name):
     if os.path.exists(file_path):
         try:
@@ -38,51 +43,38 @@ def cargar_config(file_path, default_list, col_name):
 def guardar_config(file_path, lista, col_name):
     pd.DataFrame({col_name: lista}).to_csv(file_path, index=False)
 
-def cargar_datos_cuerda():
-    if os.path.exists(CUERDA_FILE):
+def cargar_datos(file_path, cols):
+    if os.path.exists(file_path):
         try:
-            return pd.read_csv(CUERDA_FILE)
+            return pd.read_csv(file_path)
         except Exception:
             pass
-    return pd.DataFrame(columns=["Fecha", "Línea", "Extrusora", "Mes", "Sección", "Sub_Elemento", "Métrica", "Valor"])
+    return pd.DataFrame(columns=cols)
 
-def guardar_datos_cuerda(df):
-    df.to_csv(CUERDA_FILE, index=False)
+def guardar_datos(file_path, df):
+    df.to_csv(file_path, index=False)
 
-def cargar_datos_perfileria():
-    if os.path.exists(PERF_FILE):
-        try:
-            return pd.read_csv(PERF_FILE)
-        except Exception:
-            pass
-    return pd.DataFrame(columns=["Fecha", "Línea", "Equipo", "Mes", "Zona", "Temperatura (°C)"])
-
-def guardar_datos_perfileria(df):
-    df.to_csv(PERF_FILE, index=False)
-
-# --- INTERFAZ PRINCIPAL ---
-st.title("🔒 Monitoreo Predictivo Integral")
-
-modo = st.sidebar.radio("Seleccionar Módulo:", ["🧵 Cuerda", "🏭 Perfilería (Extrusión / Zonas)"])
-
+# --- CARGAR CONFIGURACIONES ---
 lineas_cuerda = cargar_config(LINEAS_CUERDA_FILE, ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5"], "Linea")
 equipos_cuerda = cargar_config(EQUIPOS_CUERDA_FILE, ["Extrusora 17", "Extrusora 04", "Extrusora 03", "Extrusora 05"], "Equipo")
 embobinadoras_cuerda = cargar_config(EMBOB_CUERDA_FILE, ["Embobinadora 1", "Embobinadora 2"], "Embobinadora")
-subsistemas_cuerda = cargar_config(SUBSISTEMAS_CUERDA_FILE, [
-    "Motor extrusor", "Godet 1", "Godet 2", "Bomba de engranes", 
-    "Extractor", "Secador", "Mezcladora", "Soplador"
-], "Subsistema")
+subsistemas_cuerda = cargar_config(SUBSISTEMAS_CUERDA_FILE, ["Motor extrusor", "Godet 1", "Godet 2", "Bomba de engranes", "Extractor", "Secador", "Mezcladora", "Soplador"], "Subsistema")
 
-lineas_perf = cargar_config(LINEAS_PERF_FILE, ["Perfilería 1", "Perfilería 2", "Perfilería 3"], "Linea")
-zonas_perf = cargar_config(ZONAS_PERF_FILE, ["Cañón 1", "Cañón 2", "Cañón 3", "Zona 1", "Zona 2", "Zona 3", "Zona 4"], "Zona")
+lineas_perf = cargar_config(LINEAS_PERF_FILE, ["Línea PPR 1", "Línea PPR 2", "Línea PPR 3", "Línea PPR 4", "Línea PPR 5"], "Linea")
+ext_perf = cargar_config(EXT_PERF_FILE, ["Extrusora 43", "Extrusora 44", "Extrusora 45"], "Extrusora")
+zonas_perf = cargar_config(ZONAS_PERF_FILE, ["Z1", "Z2", "Z3", "Z4"], "Zona")
+moldes_perf = cargar_config(MOLDES_PERF_FILE, ["Molde 1", "Molde 2", "Molde 3", "Molde 4", "Molde 5", "Molde 6", "Molde 7", "Molde 8"], "Molde")
+tinas_perf = cargar_config(TINAS_PERF_FILE, ["17 tina 34", "17 tina 33"], "Tina")
+generales_perf = cargar_config(GENERAL_PERF_FILE, ["Banda 1", "Banda 2", "Cortadora 1", "Cortadora 2"], "General")
+
+st.title("🔒 Monitoreo Predictivo Integral")
+modo = st.sidebar.radio("Seleccionar Módulo:", ["🧵 Cuerda", "🏭 Perfilería"])
 
 if modo == "🧵 Cuerda":
     st.subheader("🧵 Módulo Cuerda (Detallado por Extrusora)")
-    df_cuerda = cargar_datos_cuerda()
+    df_cuerda = cargar_datos(CUERDA_FILE, ["Fecha", "Línea", "Extrusora", "Mes", "Sección", "Sub_Elemento", "Métrica", "Valor"])
 
     with st.form("registro_cuerda_detallado", clear_on_submit=True):
-        st.subheader("➕ Registro Completo de Línea y Extrusora")
-        
         col1, col2 = st.columns(2)
         with col1:
             linea_c = st.selectbox("Línea de Cuerda", lineas_cuerda)
@@ -91,40 +83,35 @@ if modo == "🧵 Cuerda":
             
         mes_c = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10)
         
-        # --- 1. SUBSISTEMAS PRINCIPALES DINÁMICOS ---
         st.markdown("---")
         st.markdown("⚙️ **1. Subsistemas Principales de la Extrusora**")
-        
         datos_subsistemas = {}
         for sub in subsistemas_cuerda:
             st.markdown(f"**🔹 {sub}**")
             c1, c2, c3 = st.columns(3)
             with c1:
-                t = st.number_input(f"Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"t_{sub}")
+                t = st.number_input("Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"t_{sub}")
             with c2:
-                a = st.number_input(f"Amp (A)", min_value=0.0, step=0.1, format="%.1f", key=f"a_{sub}")
+                a = st.number_input("Amp (A)", min_value=0.0, step=0.1, format="%.1f", key=f"a_{sub}")
             with c3:
-                v = st.number_input(f"Vib (mm/s)", min_value=0.0, step=0.1, format="%.1f", key=f"v_{sub}")
+                v = st.number_input("Vib (mm/s)", min_value=0.0, step=0.1, format="%.1f", key=f"v_{sub}")
             datos_subsistemas[sub] = {"Temp": t, "Amp": a, "Vib": v}
 
-        # --- 2. HORNO SECADOR ---
         st.markdown("---")
         st.markdown("🔥 **2. Horno Secador**")
-        
-        st.markdown("🔹 *Sopladores del Horno*")
         sopladores_horno = {}
         for sop in ["Soplador 1", "Soplador 2"]:
             st.markdown(f"**🔹 {sop}**")
             sc1, sc2, sc3 = st.columns(3)
             with sc1:
-                st_t = st.number_input(f"Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"t_{sop}")
+                st_t = st.number_input("Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"t_{sop}")
             with sc2:
-                st_a = st.number_input(f"Amp (A)", min_value=0.0, step=0.1, format="%.1f", key=f"a_{sop}")
+                st_a = st.number_input("Amp (A)", min_value=0.0, step=0.1, format="%.1f", key=f"a_{sop}")
             with sc3:
-                st_v = st.number_input(f"Vib (mm/s)", min_value=0.0, step=0.1, format="%.1f", key=f"v_{sop}")
+                st_v = st.number_input("Vib (mm/s)", min_value=0.0, step=0.1, format="%.1f", key=f"v_{sop}")
             sopladores_horno[sop] = {"Temp": st_t, "Amp": st_a, "Vib": st_v}
 
-        st.markdown("🔹 *Zonas Térmicas del Horno (con Sub-líneas 1, 2 y 3)*")
+        st.markdown("🔹 *Zonas Térmicas del Horno (Líneas 1, 2 y 3)*")
         zonas_horno_datos = {}
         for z_num in ["Zona 1", "Zona 2", "Zona 3", "Zona 4"]:
             st.markdown(f"*{z_num}*")
@@ -137,10 +124,8 @@ if modo == "🧵 Cuerda":
                 l3_val = st.number_input(f"{z_num} - Línea 3 (Amp)", min_value=0.0, step=0.1, format="%.1f", key=f"{z_num}_l3")
             zonas_horno_datos[z_num] = {"Línea 1": l1_val, "Línea 2": l2_val, "Línea 3": l3_val}
 
-        # --- 3. EMBOBINADORAS ---
         st.markdown("---")
-        st.markdown("🌀 **3. Embobinadoras (11 valores de Amperaje por cada una)**")
-        
+        st.markdown("🌀 **3. Embobinadoras (11 valores de Amperaje)**")
         embobinadoras_datos = {}
         for emb in embobinadoras_cuerda:
             st.markdown(f"**🔹 {emb}**")
@@ -152,348 +137,183 @@ if modo == "🧵 Cuerda":
                     amps_emb.append(val_amp)
             embobinadoras_datos[emb] = amps_emb
 
-        submitted_c = st.form_submit_button("Guardar Registro Completo de Extrusora")
-        
+        submitted_c = st.form_submit_button("Guardar Registro Completo de Cuerda")
         if submitted_c:
             if linea_c and extrusora_c:
                 fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
                 registros_nuevos = []
-                
                 for sub, vals in datos_subsistemas.items():
                     for met, val in vals.items():
-                        registros_nuevos.append({
-                            "Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c,
-                            "Sección": "Subsistemas", "Sub_Elemento": sub, "Métrica": met, "Valor": val
-                        })
-                
+                        registros_nuevos.append({"Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c, "Sección": "Subsistemas", "Sub_Elemento": sub, "Métrica": met, "Valor": val})
                 for sop, vals in sopladores_horno.items():
                     for met, val in vals.items():
-                        registros_nuevos.append({
-                            "Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c,
-                            "Sección": "Horno - Sopladores", "Sub_Elemento": sop, "Métrica": met, "Valor": val
-                        })
-
+                        registros_nuevos.append({"Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c, "Sección": "Horno - Sopladores", "Sub_Elemento": sop, "Métrica": met, "Valor": val})
                 for zona, lineas_dict in zonas_horno_datos.items():
                     for lin_name, val in lineas_dict.items():
-                        registros_nuevos.append({
-                            "Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c,
-                            "Sección": "Horno - Zonas Térmicas", "Sub_Elemento": f"{zona} ({lin_name})", "Métrica": "Amp", "Valor": val
-                        })
-
+                        registros_nuevos.append({"Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c, "Sección": "Horno - Zonas Térmicas", "Sub_Elemento": f"{zona} ({lin_name})", "Métrica": "Amp", "Valor": val})
                 for emb, amps in embobinadoras_datos.items():
                     for idx, val in enumerate(amps, start=1):
-                        registros_nuevos.append({
-                            "Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c,
-                            "Sección": "Embobinadoras", "Sub_Elemento": f"{emb}", "Métrica": f"Val {idx} (Amp)", "Valor": val
-                        })
+                        registros_nuevos.append({"Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c, "Sección": "Embobinadoras", "Sub_Elemento": f"{emb}", "Métrica": f"Val {idx} (Amp)", "Valor": val})
 
                 df_act_c = pd.concat([df_cuerda, pd.DataFrame(registros_nuevos)], ignore_index=True)
-                guardar_datos_cuerda(df_act_c)
-                st.success(f"¡Registro completo guardado y congelado para **{extrusora_c}** en **{linea_c}**!")
+                guardar_datos(CUERDA_FILE, df_act_c)
+                st.success(f"¡Registro guardado para **{extrusora_c}** en **{linea_c}**!")
                 st.rerun()
-            else:
-                st.error("Por favor completa la Línea y la Extrusora.")
 
     st.divider()
-    st.subheader("📊 Histórico de Cuerda")
-    
-    if not df_cuerda.empty:
-        f_lin_c = st.selectbox("🔍 Filtrar por Línea de Cuerda:", ["Todas las Líneas"] + list(df_cuerda['Línea'].dropna().unique()))
-        if f_lin_c != "Todas las Líneas":
-            df_c_filt = df_cuerda[df_cuerda['Línea'] == f_lin_c]
-        else:
-            df_c_filt = df_cuerda
-            
-        st.dataframe(df_c_filt, use_container_width=True)
-
-    st.divider()
-
-    # --- ZONA DE CONFIGURACIÓN Y BORRADO (FUERA DE FORMULARIO PARA FUNCIONAR AL 100%) ---
-    with st.expander("🛠️ Configurar Nombres, Líneas, Extrusoras y Borrado (Protegido con PIN)"):
-        st.markdown("Ingresa tu PIN de 4 dígitos para **modificar nombres de subsistemas, agregar/quitar elementos o borrar registros**.")
+    with st.expander("🛠️ Configuración Módulo Cuerda (Protegido con PIN)"):
         pin_c = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_c")
-        
         if pin_c == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
-            
-            # --- MODIFICAR / RENOMBRAR SUBSISTEMAS ---
-            st.markdown("### ✏️ Renombrar Subsistemas Actuales")
-            sub_a_editar = st.selectbox("Selecciona un subsistema a modificar", subsistemas_cuerda, key="sub_edit_sel")
-            nuevo_nombre_sub = st.text_input("Escribe el nuevo nombre para este subsistema", value=sub_a_editar, key="nuevo_sub_txt")
-            
-            if st.button("💾 Guardar Nuevo Nombre"):
-                if nuevo_nombre_sub and nuevo_nombre_sub not in subsistemas_cuerda:
-                    idx = subsistemas_cuerda.index(sub_a_editar)
-                    subsistemas_cuerda[idx] = nuevo_nombre_sub
-                    guardar_config(SUBSISTEMAS_CUERDA_FILE, subsistemas_cuerda, "Subsistema")
-                    st.success(f"¡Cambiado exitosamente a '{nuevo_nombre_sub}'!")
-                    st.rerun()
-                else:
-                    st.warning("Escribe un nombre válido y diferente.")
-
-            st.markdown("---")
-            st.markdown("### ➕ Agregar / Quitar Subsistemas")
-            nuevo_sub = st.text_input("Agregar nuevo subsistema", placeholder="Ej. Extractor 2", key="add_sub_txt")
-            if st.button("➕ Agregar Subsistema"):
-                if nuevo_sub and nuevo_sub not in subsistemas_cuerda:
-                    subsistemas_cuerda.append(nuevo_sub)
-                    guardar_config(SUBSISTEMAS_CUERDA_FILE, subsistemas_cuerda, "Subsistema")
-                    st.success("¡Subsistema añadido!")
-                    st.rerun()
-
-            del_sub = st.selectbox("Eliminar Subsistema", ["Selecciona..."] + subsistemas_cuerda, key="del_sub")
-            if st.button("❌ Quitar Subsistema seleccionado") and del_sub != "Selecciona...":
-                subsistemas_cuerda.remove(del_sub)
+            # Subsistemas
+            sub_ed = st.selectbox("Editar Subsistema", subsistemas_cuerda, key="se")
+            n_sub = st.text_input("Nuevo nombre", value=sub_ed, key="nse")
+            if st.button("💾 Guardar Subsistema"):
+                subsistemas_cuerda[subsistemas_cuerda.index(sub_ed)] = n_sub
                 guardar_config(SUBSISTEMAS_CUERDA_FILE, subsistemas_cuerda, "Subsistema")
-                st.success("Subsistema eliminado.")
                 st.rerun()
-
-            st.markdown("---")
-            # --- LÍNEAS ---
-            st.markdown("### 🧵 Administrar Líneas de Cuerda")
-            st.write("Líneas actuales:", lineas_cuerda)
-            
-            linea_a_editar = st.selectbox("Selecciona una línea a modificar", lineas_cuerda, key="lin_edit_sel")
-            nuevo_nombre_lin = st.text_input("Nuevo nombre de la línea", value=linea_a_editar, key="nuevo_lin_txt")
+            # Líneas Cuerda
+            lin_ed = st.selectbox("Editar Línea Cuerda", lineas_cuerda, key="le")
+            n_lin = st.text_input("Nuevo nombre línea", value=lin_ed, key="nle")
             if st.button("💾 Guardar Línea"):
-                if nuevo_nombre_lin and nuevo_nombre_lin not in lineas_cuerda:
-                    idx = lineas_cuerda.index(linea_a_editar)
-                    lineas_cuerda[idx] = nuevo_nombre_lin
-                    guardar_config(LINEAS_CUERDA_FILE, lineas_cuerda, "Linea")
-                    st.success("¡Línea actualizada!")
-                    st.rerun()
-
-            nueva_l_c = st.text_input("Agregar nueva Línea", placeholder="Ej. Línea 6", key="add_l_txt")
-            if st.button("➕ Agregar Línea"):
-                if nueva_l_c and nueva_l_c not in lineas_cuerda:
-                    lineas_cuerda.append(nueva_l_c)
-                    guardar_config(LINEAS_CUERDA_FILE, lineas_cuerda, "Linea")
-                    st.success("¡Línea añadida!")
-                    st.rerun()
-            
-            del_l_c = st.selectbox("Eliminar Línea", ["Selecciona..."] + lineas_cuerda, key="del_lc")
-            if st.button("❌ Quitar Línea seleccionada") and del_l_c != "Selecciona...":
-                lineas_cuerda.remove(del_l_c)
+                lineas_cuerda[lineas_cuerda.index(lin_ed)] = n_lin
                 guardar_config(LINEAS_CUERDA_FILE, lineas_cuerda, "Linea")
-                st.success("Línea eliminada.")
                 st.rerun()
-
-            st.markdown("---")
-            # --- EXTRUSORAS ---
-            st.markdown("### 🏭 Administrar Extrusoras")
-            st.write("Extrusoras actuales:", equipos_cuerda)
-            
-            ext_a_editar = st.selectbox("Selecciona una extrusora a modificar", equipos_cuerda, key="ext_edit_sel")
-            nuevo_nombre_ext = st.text_input("Nuevo nombre de la extrusora", value=ext_a_editar, key="nuevo_ext_txt")
-            if st.button("💾 Guardar Extrusora"):
-                if nuevo_nombre_ext and nuevo_nombre_ext not in equipos_cuerda:
-                    idx = equipos_cuerda.index(ext_a_editar)
-                    equipos_cuerda[idx] = nuevo_nombre_ext
-                    guardar_config(EQUIPOS_CUERDA_FILE, equipos_cuerda, "Equipo")
-                    st.success("¡Extrusora actualizada!")
-                    st.rerun()
-
-            nuevo_eq_c = st.text_input("Agregar nueva Extrusora", placeholder="Ej. Extrusora 17", key="add_ext_txt")
-            if st.button("➕ Agregar Extrusora"):
-                if nuevo_eq_c and nuevo_eq_c not in equipos_cuerda:
-                    equipos_cuerda.append(nuevo_eq_c)
-                    guardar_config(EQUIPOS_CUERDA_FILE, equipos_cuerda, "Equipo")
-                    st.success("¡Extrusora añadida!")
-                    st.rerun()
-
-            del_eq_c = st.selectbox("Eliminar Extrusora", ["Selecciona..."] + equipos_cuerda, key="del_eqc")
-            if st.button("❌ Quitar Extrusora seleccionada") and del_eq_c != "Selecciona...":
-                equipos_cuerda.remove(del_eq_c)
-                guardar_config(EQUIPOS_CUERDA_FILE, equipos_cuerda, "Equipo")
-                st.success("Extrusora eliminada.")
-                st.rerun()
-
-            st.markdown("---")
-            # --- EMBOBINADORAS ---
-            st.markdown("### 🌀 Administrar Embobinadoras")
-            st.write("Embobinadoras actuales:", embobinadoras_cuerda)
-            
-            emb_a_editar = st.selectbox("Selecciona una embobinadora a modificar", embobinadoras_cuerda, key="emb_edit_sel")
-            nuevo_nombre_emb = st.text_input("Nuevo nombre de la embobinadora", value=emb_a_editar, key="nuevo_emb_txt")
-            if st.button("💾 Guardar Embobinadora"):
-                if nuevo_nombre_emb and nuevo_nombre_emb not in embobinadoras_cuerda:
-                    idx = embobinadoras_cuerda.index(emb_a_editar)
-                    embobinadoras_cuerda[idx] = nuevo_nombre_emb
-                    guardar_config(EMBOB_CUERDA_FILE, embobinadoras_cuerda, "Embobinadora")
-                    st.success("¡Embobinadora actualizada!")
-                    st.rerun()
-
-            nueva_emb = st.text_input("Agregar nueva Embobinadora", placeholder="Ej. Embobinadora 3", key="add_emb_txt")
-            if st.button("➕ Agregar Embobinadora"):
-                if nueva_emb and nueva_emb not in embobinadoras_cuerda:
-                    embobinadoras_cuerda.append(nueva_emb)
-                    guardar_config(EMBOB_CUERDA_FILE, embobinadoras_cuerda, "Embobinadora")
-                    st.success("¡Embobinadora añadida!")
-                    st.rerun()
-
-            del_emb = st.selectbox("Eliminar Embobinadora", ["Selecciona..."] + embobinadoras_cuerda, key="del_emb")
-            if st.button("❌ Quitar Embobinadora seleccionada") and del_emb != "Selecciona...":
-                embobinadoras_cuerda.remove(del_emb)
-                guardar_config(EMBOB_CUERDA_FILE, embobinadoras_cuerda, "Embobinadora")
-                st.success("Embobinadora eliminada.")
-                st.rerun()
-
-            st.markdown("---")
-            st.markdown("### 🗑️ Borrar Registros de Cuerda")
-            if not df_cuerda.empty:
-                df_cuerda['Identificador'] = "Fila " + df_cuerda.index.astype(str) + " | " + df_cuerda['Línea'].astype(str) + " | Ext: " + df_cuerda['Extrusora'].astype(str) + " | " + df_cuerda['Mes'].astype(str)
-                reg_b_c = st.multiselect("Selecciona registros a borrar:", df_cuerda['Identificador'].unique().tolist())
-                if st.button("Borrar registros de Cuerda seleccionados"):
-                    idxs_c = []
-                    for item in reg_b_c:
-                        idx_num = int(item.split(" | ")[0].replace("Fila ", ""))
-                        idxs_c.append(idx_num)
-                    df_c_limpio = df_cuerda.drop(df_cuerda.index[idxs_c]).drop(columns=['Identificador'])
-                    guardar_datos_cuerda(df_c_limpio)
-                    st.success("¡Registros eliminados!")
-                    st.rerun()
-
         elif pin_c != "":
-            st.error("❌ PIN incorrecto.")
-        else:
-            st.info("💡 Ingresa el PIN para desbloquear la gestión.")
+            st.error("PIN Incorrecto")
 
 else:
     # --- MÓDULO DE PERFILERÍA ---
-    st.subheader("🏭 Módulo de Perfilería (Zonas y Cañones)")
-    df_perf = cargar_datos_perfileria()
+    st.subheader("🏭 Módulo Perfilería (Detallado)")
+    df_perf = cargar_datos(PERF_FILE, ["Fecha", "Línea_PPR", "Extrusora/Sección", "Sub_Elemento", "Mes", "Métrica", "Valor"])
 
-    with st.form("registro_perfileria", clear_on_submit=True):
-        st.subheader("➕ Registro Térmico por Zonas")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            linea_perf = st.selectbox("Línea de Perfilería", lineas_perf)
-        with col2:
-            equipo_perf = st.text_input("Nombre de Máquina / Extrusora", placeholder="Ej. Extrusora Principal")
-            
-        mes_perf = st.selectbox("Mes de Medición", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10, key="mes_p")
+    with st.form("registro_perfileria_detallado", clear_on_submit=True):
+        linea_ppr = st.selectbox("Línea de PPR", lineas_perf)
+        mes_p = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10, key="mes_per")
         
         st.markdown("---")
-        st.markdown(f"🌡️ **Temperaturas por Zona Configurada ({len(zonas_perf)} zonas activas):**")
-        
-        temperaturas_capturadas = {}
-        if len(zonas_perf) > 0:
-            cols_zonas = st.columns(3)
-            for idx, zona in enumerate(zonas_perf):
-                with cols_zonas[idx % 3]:
-                    temperaturas_capturadas[zona] = st.number_input(f"{zona} (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"z_{zona}")
-        else:
-            st.warning("No hay zonas configuradas. Ve a la zona protegida abajo para agregarlas.")
+        st.markdown("🏭 **1. Extrusoras (Zonas Z1-Z4, Brida y Conector)**")
+        extrusoras_datos = {}
+        for ext in ext_perf:
+            st.markdown(f"**🔹 {ext}**")
+            ext_vals = {}
+            # Zonas térmicas
+            for z in zonas_perf:
+                ext_vals[z] = st.number_input(f"{ext} - {z} (Amp/Temp)", min_value=0.0, step=0.1, format="%.1f", key=f"{ext}_{z}")
+            # Brida y Conector (puro amperaje)
+            ext_vals["Brida del cilindro"] = st.number_input(f"{ext} - Brida del cilindro (Amp)", min_value=0.0, step=0.1, format="%.1f", key=f"{ext}_brida")
+            ext_vals["Conector"] = st.number_input(f"{ext} - Conector (Amp)", min_value=0.0, step=0.1, format="%.1f", key=f"{ext}_conector")
+            extrusoras_datos[ext] = ext_vals
 
-        submitted_perf = st.form_submit_button("Guardar Temperaturas de Perfilería")
-        
-        if submitted_perf:
-            if linea_perf and equipo_perf and len(zonas_perf) > 0:
-                fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
-                filas_nuevas = []
-                for zona, temp_val in temperaturas_capturadas.items():
-                    filas_nuevas.append({
-                        "Fecha": fecha_actual,
-                        "Línea": linea_perf,
-                        "Equipo": equipo_perf,
-                        "Mes": mes_perf,
-                        "Zona": zona,
-                        "Temperatura (°C)": temp_val
-                    })
-                df_nuevas = pd.DataFrame(filas_nuevas)
-                df_act_perf = pd.concat([df_perf, df_nuevas], ignore_index=True)
-                guardar_datos_perfileria(df_act_perf)
-                st.success(f"¡Mediciones guardadas para **{equipo_perf}** en **{linea_perf}**!")
-                st.rerun()
-            else:
-                st.error("Completa la Línea, el Equipo y asegúrate de tener al menos una zona configurada.")
+        st.markdown("---")
+        st.markdown("🌀 **2. Moldes (1 al 8 - Puro Amperaje)**")
+        moldes_datos = {}
+        m_cols = st.columns(4)
+        for idx, mol in enumerate(moldes_perf):
+            with m_cols[idx % 4]:
+                moldes_datos[mol] = st.number_input(f"{mol} (Amp)", min_value=0.0, step=0.1, format="%.1f", key=f"molde_{mol}")
 
-    st.divider()
-    st.subheader("📊 Histórico y Evolución de Perfilería")
+        st.markdown("---")
+        st.markdown("💨 **3. Ventiladores por Extrusora (1 al 4 - Puro Amperaje)**")
+        ventiladores_datos = {}
+        for ext in ext_perf:
+            st.markdown(f"*Ventiladores para {ext}*")
+            v_cols = st.columns(4)
+            vent_ext = {}
+            for i in range(1, 5):
+                v_name = f"Ventilador {i}"
+                with v_cols[(i - 1) % 4]:
+                    vent_ext[v_name] = st.number_input(f"{ext} - {v_name} (Amp)", min_value=0.0, step=0.1, format="%.1f", key=f"vent_{ext}_{i}")
+            ventiladores_datos[ext] = vent_ext
 
-    if not df_perf.empty:
-        lineas_p_reg = ["Todas las Líneas"] + list(df_perf['Línea'].dropna().unique())
-        f_linea = st.selectbox("🔍 Filtrar por Línea de Perfilería:", lineas_p_reg)
-        
-        if f_linea != "Todas las Líneas":
-            df_perf_filtrado = df_perf[df_perf['Línea'] == f_linea]
-        else:
-            df_perf_filtrado = df_perf
+        st.markdown("---")
+        st.markdown("🌊 **4. Tinas (Bombas de Vacío y Agua)**")
+        tinas_datos = {}
+        for tina in tinas_perf:
+            st.markdown(f"**🔹 Tina: {tina}**")
+            tina_subs = {}
+            for bomba in ["Bomba de vacío 1", "Bomba de vacío 2", "Bomba de agua 1", "Bomba de agua 2"]:
+                st.markdown(f"*{bomba}*")
+                bc1, bc2, bc3 = st.columns(3)
+                with bc1:
+                    bt = st.number_input(f"Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"t_{tina}_{bomba}")
+                with bc2:
+                    ba = st.number_input(f"Amp (A)", min_value=0.0, step=0.1, format="%.1f", key=f"a_{tina}_{bomba}")
+                with bc3:
+                    bv = st.number_input(f"Vib (mm/s)", min_value=0.0, step=0.1, format="%.1f", key=f"v_{tina}_{bomba}")
+                tina_subs[bomba] = {"Temp": bt, "Amp": ba, "Vib": bv}
+            tinas_datos[tina] = tina_subs
 
-        st.dataframe(df_perf_filtrado, use_container_width=True)
+        st.markdown("---")
+        st.markdown("⚙️ **5. Bandas y Cortadoras**")
+        generales_datos = {}
+        for gen in generales_perf:
+            st.markdown(f"**🔹 {gen}**")
+            gc1, gc2, gc3 = st.columns(3)
+            with gc1:
+                gt = st.number_input(f"Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"t_{gen}")
+            with gc2:
+                ga = st.number_input(f"Amp (A)", min_value=0.0, step=0.1, format="%.1f", key=f"a_{gen}")
+            with gc3:
+                gv = st.number_input(f"Vib (mm/s)", min_value=0.0, step=0.1, format="%.1f", key=f"v_{gen}")
+            generales_datos[gen] = {"Temp": gt, "Amp": ga, "Vib": gv}
 
-        st.subheader("📉 Tendencia Térmica por Zona (Mes a Mes)")
-        equipos_perf = df_perf['Equipo'].dropna().unique()
-        if len(equipos_perf) > 0:
-            eq_p_sel = st.selectbox("Selecciona la máquina/extrusora:", equipos_perf, key="eq_p")
-            df_eq_p = df_perf[df_perf['Equipo'] == eq_p_sel].copy()
+        submitted_p = st.form_submit_button("Guardar Registro Completo de Perfilería")
+        if submitted_p:
+            fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
+            reg_perf = []
             
-            if 'Fecha' in df_eq_p.columns:
-                df_eq_p = df_eq_p.sort_values('Fecha')
-                df_eq_p['Evolución_Mes'] = df_eq_p['Mes'] + " (" + df_eq_p['Fecha'].astype(str).str[:10] + ")"
-                
-                df_pivot = df_eq_p.pivot_table(index='Evolución_Mes', columns='Zona', values='Temperatura (°C)')
-                st.line_chart(df_pivot)
+            # Guardar extrusoras perfilería
+            for ext, vals in extrusoras_datos.items():
+                for sub_elem, val in vals.items():
+                    reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": ext, "Sub_Elemento": sub_elem, "Mes": mes_p, "Métrica": "Valor", "Valor": val})
+            
+            # Guardar moldes
+            for mol, val in moldes_datos.items():
+                reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": "Moldes", "Sub_Elemento": mol, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
+
+            # Guardar ventiladores
+            for ext, vents in ventiladores_datos.items():
+                for v_name, val in vents.items():
+                    reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": f"Ventiladores {ext}", "Sub_Elemento": v_name, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
+
+            # Guardar tinas
+            for tina, bs in tinas_datos.items():
+                for bomba, metrics in bs.items():
+                    for met, val in metrics.items():
+                        reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": f"Tina {tina}", "Sub_Elemento": bomba, "Mes": mes_p, "Métrica": met, "Valor": val})
+
+            # Guardar bandas/cortadoras
+            for gen, metrics in generales_datos.items():
+                for met, val in metrics.items():
+                    reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": "Equipos Generales", "Sub_Elemento": gen, "Mes": mes_p, "Métrica": met, "Valor": val})
+
+            df_act_p = pd.concat([df_perf, pd.DataFrame(reg_perf)], ignore_index=True)
+            guardar_datos(PERF_FILE, df_act_p)
+            st.success(f"¡Registro completo guardado para **{linea_ppr}**!")
+            st.rerun()
 
     st.divider()
-
-    # --- ZONA DE CONFIGURACIÓN DE PERFILERÍA (PROTEGIDA CON PIN) ---
-    with st.expander("🛠️ Configurar Cañones, Zonas y Líneas de Perfilería (Protegido con PIN)"):
-        st.markdown("Ingresa tu PIN de 4 dígitos para **agregar o quitar cañones, zonas y líneas** de perfilería.")
-        pin_perf = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_perf")
-        
-        if pin_perf == PIN_SEGURIDAD:
+    with st.expander("🛠️ Configuración Módulo Perfilería (Protegido con PIN)"):
+        pin_p = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_p")
+        if pin_p == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            st.markdown("### 🌡️ Administrar Cañones y Zonas Térmicas")
-            st.write("Zonas actuales activas:", zonas_perf)
-            nueva_zona = st.text_input("Escribe el nuevo cañón o zona", placeholder="Ej. Cañón 4, Zona 5")
-            if st.button("➕ Agregar Cañón / Zona"):
-                if nueva_zona and nueva_zona not in zonas_perf:
-                    zonas_perf.append(nueva_zona)
-                    guardar_config(ZONAS_PERF_FILE, zonas_perf, "Zona")
-                    st.success("¡Zona agregada!")
-                    st.rerun()
-
-            zona_a_quitar = st.selectbox("Eliminar Cañón o Zona", ["Selecciona..."] + zonas_perf)
-            if st.button("❌ Quitar Zona seleccionada") and zona_a_quitar != "Selecciona...":
-                zonas_perf.remove(zona_a_quitar)
-                guardar_config(ZONAS_PERF_FILE, zonas_perf, "Zona")
-                st.success("Zona eliminada.")
-                st.rerun()
-
-            st.markdown("---")
-            st.markdown("### 🏭 Administrar Líneas de Perfilería")
-            st.write("Líneas actuales:", lineas_perf)
-            nueva_linea_p = st.text_input("Escribe la nueva línea de perfilería", placeholder="Ej. Perfilería 4")
-            if st.button("➕ Agregar Línea de Perfilería"):
-                if nueva_linea_p and nueva_linea_p not in lineas_perf:
-                    lineas_perf.append(nueva_linea_p)
-                    guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
-                    st.success("¡Línea añadida!")
-                    st.rerun()
-
-            linea_a_quitar_p = st.selectbox("Eliminar Línea de Perfilería", ["Selecciona..."] + lineas_perf)
-            if st.button("❌ Quitar Línea de Perfilería seleccionada") and linea_a_quitar_p != "Selecciona...":
-                lineas_perf.remove(linea_a_quitar_p)
+            # Editar Líneas PPR
+            lppr_ed = st.selectbox("Editar Línea PPR", lineas_perf, key="lppre")
+            n_lppr = st.text_input("Nuevo nombre de línea PPR", value=lppr_ed, key="nlppre")
+            if st.button("💾 Guardar Línea PPR"):
+                lineas_perf[lineas_perf.index(lppr_ed)] = n_lppr
                 guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
-                st.success("Línea eliminada.")
                 st.rerun()
 
-            st.markdown("---")
-            st.markdown("### 🗑️ Borrar Registros de Perfilería")
-            if not df_perf.empty:
-                df_perf['Identificador'] = "Fila " + df_perf.index.astype(str) + " | " + df_perf['Equipo'].astype(str) + " | Zona: " + df_perf['Zona'].astype(str) + " | " + df_perf['Mes'].astype(str)
-                reg_borrar_p = st.multiselect("Selecciona registros a borrar:", df_perf['Identificador'].tolist())
-                if st.button("Borrar registros de perfilería seleccionados"):
-                    idxs_p = [int(x.split(" | ")[0].replace("Fila ", "")) for x in reg_borrar_p]
-                    df_perf_limpio = df_perf.drop(idxs_p).drop(columns=['Identificador'])
-                    guardar_datos_perfileria(df_perf_limpio)
-                    st.success("¡Registros eliminados!")
-                    st.rerun()
-                    
-        elif pin_perf != "":
-            st.error("❌ PIN incorrecto.")
-        else:
-            st.info("💡 Ingresa el PIN para desbloquear la gestión de Perfilería.")
+            # Editar Extrusoras Perfilería
+            ext_ed = st.selectbox("Editar Extrusora Perfilería", ext_perf, key="exte")
+            n_ext = st.text_input("Nuevo nombre extrusora", value=ext_ed, key="nexte")
+            if st.button("💾 Guardar Extrusora Perf"):
+                ext_perf[ext_perf.index(ext_ed)] = n_ext
+                guardar_config(EXT_PERF_FILE, ext_perf, "Extrusora")
+                st.rerun()
+                
+        elif pin_p != "":
+            st.error("PIN Incorrecto")
