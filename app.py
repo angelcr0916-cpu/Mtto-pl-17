@@ -159,7 +159,6 @@ if modo == "🧵 Cuerda":
                 fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
                 registros_nuevos = []
                 
-                # Guardar subsistemas
                 for sub, vals in datos_subsistemas.items():
                     for met, val in vals.items():
                         registros_nuevos.append({
@@ -167,7 +166,6 @@ if modo == "🧵 Cuerda":
                             "Sección": "Subsistemas", "Sub_Elemento": sub, "Métrica": met, "Valor": val
                         })
                 
-                # Guardar sopladores horno
                 for sop, vals in sopladores_horno.items():
                     for met, val in vals.items():
                         registros_nuevos.append({
@@ -175,7 +173,6 @@ if modo == "🧵 Cuerda":
                             "Sección": "Horno - Sopladores", "Sub_Elemento": sop, "Métrica": met, "Valor": val
                         })
 
-                # Guardar zonas horno
                 for zona, lineas_dict in zonas_horno_datos.items():
                     for lin_name, val in lineas_dict.items():
                         registros_nuevos.append({
@@ -183,7 +180,6 @@ if modo == "🧵 Cuerda":
                             "Sección": "Horno - Zonas Térmicas", "Sub_Elemento": f"{zona} ({lin_name})", "Métrica": "Amp", "Valor": val
                         })
 
-                # Guardar embobinadoras
                 for emb, amps in embobinadoras_datos.items():
                     for idx, val in enumerate(amps, start=1):
                         registros_nuevos.append({
@@ -212,18 +208,32 @@ if modo == "🧵 Cuerda":
 
     st.divider()
 
-    # --- ZONA DE CONFIGURACIÓN Y BORRADO (PROTEGIDA CON PIN) ---
+    # --- ZONA DE CONFIGURACIÓN Y BORRADO (FUERA DE FORMULARIO PARA FUNCIONAR AL 100%) ---
     with st.expander("🛠️ Configurar Nombres, Líneas, Extrusoras y Borrado (Protegido con PIN)"):
-        st.markdown("Ingresa tu PIN de 4 dígitos para **personalizar nombres de subsistemas, agregar/quitar elementos o borrar registros**.")
+        st.markdown("Ingresa tu PIN de 4 dígitos para **modificar nombres de subsistemas, agregar/quitar elementos o borrar registros**.")
         pin_c = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_c")
         
         if pin_c == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            # 1. Personalizar Subsistemas (Godets, Bomba, etc.)
-            st.markdown("### ⚙️ Administrar Nombres de Subsistemas (Godets, Bombas, etc.)")
-            st.write("Subsistemas actuales:", subsistemas_cuerda)
-            nuevo_sub = st.text_input("Agregar nuevo subsistema", placeholder="Ej. Godet 3")
+            # --- MODIFICAR / RENOMBRAR SUBSISTEMAS ---
+            st.markdown("### ✏️ Renombrar Subsistemas Actuales")
+            sub_a_editar = st.selectbox("Selecciona un subsistema a modificar", subsistemas_cuerda, key="sub_edit_sel")
+            nuevo_nombre_sub = st.text_input("Escribe el nuevo nombre para este subsistema", value=sub_a_editar, key="nuevo_sub_txt")
+            
+            if st.button("💾 Guardar Nuevo Nombre"):
+                if nuevo_nombre_sub and nuevo_nombre_sub not in subsistemas_cuerda:
+                    idx = subsistemas_cuerda.index(sub_a_editar)
+                    subsistemas_cuerda[idx] = nuevo_nombre_sub
+                    guardar_config(SUBSISTEMAS_CUERDA_FILE, subsistemas_cuerda, "Subsistema")
+                    st.success(f"¡Cambiado exitosamente a '{nuevo_nombre_sub}'!")
+                    st.rerun()
+                else:
+                    st.warning("Escribe un nombre válido y diferente.")
+
+            st.markdown("---")
+            st.markdown("### ➕ Agregar / Quitar Subsistemas")
+            nuevo_sub = st.text_input("Agregar nuevo subsistema", placeholder="Ej. Extractor 2", key="add_sub_txt")
             if st.button("➕ Agregar Subsistema"):
                 if nuevo_sub and nuevo_sub not in subsistemas_cuerda:
                     subsistemas_cuerda.append(nuevo_sub)
@@ -239,10 +249,21 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
             st.markdown("---")
-            # 2. Líneas
+            # --- LÍNEAS ---
             st.markdown("### 🧵 Administrar Líneas de Cuerda")
             st.write("Líneas actuales:", lineas_cuerda)
-            nueva_l_c = st.text_input("Agregar nueva Línea", placeholder="Ej. Línea 6")
+            
+            linea_a_editar = st.selectbox("Selecciona una línea a modificar", lineas_cuerda, key="lin_edit_sel")
+            nuevo_nombre_lin = st.text_input("Nuevo nombre de la línea", value=linea_a_editar, key="nuevo_lin_txt")
+            if st.button("💾 Guardar Línea"):
+                if nuevo_nombre_lin and nuevo_nombre_lin not in lineas_cuerda:
+                    idx = lineas_cuerda.index(linea_a_editar)
+                    lineas_cuerda[idx] = nuevo_nombre_lin
+                    guardar_config(LINEAS_CUERDA_FILE, lineas_cuerda, "Linea")
+                    st.success("¡Línea actualizada!")
+                    st.rerun()
+
+            nueva_l_c = st.text_input("Agregar nueva Línea", placeholder="Ej. Línea 6", key="add_l_txt")
             if st.button("➕ Agregar Línea"):
                 if nueva_l_c and nueva_l_c not in lineas_cuerda:
                     lineas_cuerda.append(nueva_l_c)
@@ -258,10 +279,21 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
             st.markdown("---")
-            # 3. Extrusoras
+            # --- EXTRUSORAS ---
             st.markdown("### 🏭 Administrar Extrusoras")
             st.write("Extrusoras actuales:", equipos_cuerda)
-            nuevo_eq_c = st.text_input("Agregar nueva Extrusora", placeholder="Ej. Extrusora 17")
+            
+            ext_a_editar = st.selectbox("Selecciona una extrusora a modificar", equipos_cuerda, key="ext_edit_sel")
+            nuevo_nombre_ext = st.text_input("Nuevo nombre de la extrusora", value=ext_a_editar, key="nuevo_ext_txt")
+            if st.button("💾 Guardar Extrusora"):
+                if nuevo_nombre_ext and nuevo_nombre_ext not in equipos_cuerda:
+                    idx = equipos_cuerda.index(ext_a_editar)
+                    equipos_cuerda[idx] = nuevo_nombre_ext
+                    guardar_config(EQUIPOS_CUERDA_FILE, equipos_cuerda, "Equipo")
+                    st.success("¡Extrusora actualizada!")
+                    st.rerun()
+
+            nuevo_eq_c = st.text_input("Agregar nueva Extrusora", placeholder="Ej. Extrusora 17", key="add_ext_txt")
             if st.button("➕ Agregar Extrusora"):
                 if nuevo_eq_c and nuevo_eq_c not in equipos_cuerda:
                     equipos_cuerda.append(nuevo_eq_c)
@@ -277,10 +309,21 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
             st.markdown("---")
-            # 4. Embobinadoras
+            # --- EMBOBINADORAS ---
             st.markdown("### 🌀 Administrar Embobinadoras")
             st.write("Embobinadoras actuales:", embobinadoras_cuerda)
-            nueva_emb = st.text_input("Agregar nueva Embobinadora", placeholder="Ej. Embobinadora 3")
+            
+            emb_a_editar = st.selectbox("Selecciona una embobinadora a modificar", embobinadoras_cuerda, key="emb_edit_sel")
+            nuevo_nombre_emb = st.text_input("Nuevo nombre de la embobinadora", value=emb_a_editar, key="nuevo_emb_txt")
+            if st.button("💾 Guardar Embobinadora"):
+                if nuevo_nombre_emb and nuevo_nombre_emb not in embobinadoras_cuerda:
+                    idx = embobinadoras_cuerda.index(emb_a_editar)
+                    embobinadoras_cuerda[idx] = nuevo_nombre_emb
+                    guardar_config(EMBOB_CUERDA_FILE, embobinadoras_cuerda, "Embobinadora")
+                    st.success("¡Embobinadora actualizada!")
+                    st.rerun()
+
+            nueva_emb = st.text_input("Agregar nueva Embobinadora", placeholder="Ej. Embobinadora 3", key="add_emb_txt")
             if st.button("➕ Agregar Embobinadora"):
                 if nueva_emb and nueva_emb not in embobinadoras_cuerda:
                     embobinadoras_cuerda.append(nueva_emb)
