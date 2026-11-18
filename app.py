@@ -294,28 +294,58 @@ else:
         if pin_p == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            # Editar Sub-líneas (Línea 1, 2, 3...)
-            sublin_ed = st.selectbox("Editar Nombre de Línea", sub_lineas_perf, key="subline")
-            n_sublin = st.text_input("Nuevo nombre de línea", value=sublin_ed, key="nsubline")
-            if st.button("💾 Guardar Nombre de Línea"):
-                sub_lineas_perf[sub_lineas_perf.index(sublin_ed)] = n_sublin
-                guardar_config(SUB_LINEAS_PERF_FILE, sub_lineas_perf, "SubLínea")
-                st.rerun()
-
-            nueva_sublin = st.text_input("Agregar nueva Línea", placeholder="Ej. Línea 6")
-            if st.button("➕ Agregar Línea"):
-                if nueva_sublin and nueva_sublin not in sub_lineas_perf:
-                    sub_lineas_perf.append(nueva_sublin)
-                    guardar_config(SUB_LINEAS_PERF_FILE, sub_lineas_perf, "SubLínea")
-                    st.success("¡Línea añadida!")
-                    st.rerun()
-
-            # Editar Tipos de Sistema
-            sys_ed = st.selectbox("Editar Tipo de Sistema", lineas_perf, key="syse")
+            # 1. Editar Tipos de Sistema
+            st.markdown("### 📁 Editar Tipos de Sistema")
+            sys_ed = st.selectbox("Seleccionar Sistema", lineas_perf, key="syse")
             n_sys = st.text_input("Nuevo nombre de sistema", value=sys_ed, key="nsyse")
             if st.button("💾 Guardar Sistema"):
                 lineas_perf[lineas_perf.index(sys_ed)] = n_sys
                 guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
+                st.success("¡Actualizado!")
+                st.rerun()
+
+            st.markdown("---")
+            # 2. Editar Sub-líneas (Línea 1, 2, 3...)
+            st.markdown("### 🧵 Editar Líneas")
+            sublin_ed = st.selectbox("Seleccionar Línea", sub_lineas_perf, key="subline")
+            n_sublin = st.text_input("Nuevo nombre de línea", value=sublin_ed, key="nsubline")
+            if st.button("💾 Guardar Línea"):
+                sub_lineas_perf[sub_lineas_perf.index(sublin_ed)] = n_sublin
+                guardar_config(SUB_LINEAS_PERF_FILE, sub_lineas_perf, "SubLínea")
+                st.success("¡Actualizado!")
+                st.rerun()
+
+            st.markdown("---")
+            # 3. Editar Zonas
+            st.markdown("### 🌡️ Editar Zonas (Z1, Z2...)")
+            zona_ed = st.selectbox("Seleccionar Zona", zonas_perf, key="zonae")
+            n_zona = st.text_input("Nuevo nombre de zona", value=zona_ed, key="nzona")
+            if st.button("💾 Guardar Zona"):
+                zonas_perf[zonas_perf.index(zona_ed)] = n_zona
+                guardar_config(ZONAS_PERF_FILE, zonas_perf, "Zona")
+                st.success("¡Actualizado!")
+                st.rerun()
+
+            st.markdown("---")
+            # 4. Editar Tinas
+            st.markdown("### 🌊 Editar Tinas")
+            tina_ed = st.selectbox("Seleccionar Tina", tinas_perf, key="tinae")
+            n_tina = st.text_input("Nuevo nombre de tina", value=tina_ed, key="ntina")
+            if st.button("💾 Guardar Tina"):
+                tinas_perf[tinas_perf.index(tina_ed)] = n_tina
+                guardar_config(TINAS_PERF_FILE, tinas_perf, "Tina")
+                st.success("¡Actualizado!")
+                st.rerun()
+
+            st.markdown("---")
+            # 5. Editar Bandas y Cortadoras (Generales)
+            st.markdown("### ⚙️ Editar Bandas y Cortadoras")
+            gen_ed = st.selectbox("Seleccionar Equipo (Banda/Cortadora)", generales_perf, key="gene")
+            n_gen = st.text_input("Nuevo nombre de equipo", value=gen_ed, key="ngen")
+            if st.button("💾 Guardar Equipo General"):
+                generales_perf[generales_perf.index(gen_ed)] = n_gen
+                guardar_config(GENERAL_PERF_FILE, generales_perf, "General")
+                st.success("¡Actualizado!")
                 st.rerun()
                 
         elif pin_p != "":
