@@ -164,6 +164,37 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
     st.divider()
+    st.subheader("📊 Histórico y Gráficas de Cuerda")
+    if not df_cuerda.empty:
+        # Botón de descarga Excel
+        import io
+        output_c = io.BytesIO()
+        with pd.ExcelWriter(output_c, engine='openpyxl') as writer:
+            df_cuerda.to_excel(writer, index=False, sheet_name='Historial_Cuerda')
+        excel_data_c = output_c.getvalue()
+
+        st.download_button(
+            label="📥 Descargar Historial de Cuerda en Excel (.xlsx)",
+            data=excel_data_c,
+            file_name="historial_cuerda.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+        f_lin_c = st.selectbox("🔍 Filtrar por Línea de Cuerda:", ["Todas las Líneas"] + list(df_cuerda['Línea'].dropna().unique()))
+        df_c_filt = df_cuerda if f_lin_c == "Todas las Líneas" else df_cuerda[df_cuerda['Línea'] == f_lin_c]
+        st.dataframe(df_c_filt, use_container_width=True)
+
+        st.markdown("### 📈 Tendencia Histórica")
+        eqs_c = df_c_filt['Extrusora'].dropna().unique()
+        if len(eqs_c) > 0:
+            eq_sel_c = st.selectbox("Selecciona extrusora para graficar:", eqs_c)
+            df_eq_c = df_c_filt[df_c_filt['Extrusora'] == eq_sel_c].copy()
+            if not df_eq_c.empty:
+                df_eq_c['Evolución'] = df_eq_c['Mes'] + " (" + df_eq_c['Fecha'].astype(str).str[:10] + ")"
+                pivot_c = df_eq_c.pivot_table(index='Evolución', columns='Sub_Elemento', values='Valor')
+                st.line_chart(pivot_c)
+
+    st.divider()
     with st.expander("🛠️ Configuración Módulo Cuerda (Protegido con PIN)"):
         pin_c = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_c")
         if pin_c == PIN_SEGURIDAD:
@@ -289,12 +320,42 @@ else:
             st.rerun()
 
     st.divider()
+    st.subheader("📊 Histórico y Gráficas de Perfilería")
+    if not df_perf.empty:
+        # Botón de descarga Excel Perfilería
+        import io
+        output_p = io.BytesIO()
+        with pd.ExcelWriter(output_p, engine='openpyxl') as writer:
+            df_perf.to_excel(writer, index=False, sheet_name='Historial_Perfileria')
+        excel_data_p = output_p.getvalue()
+
+        st.download_button(
+            label="📥 Descargar Historial de Perfilería en Excel (.xlsx)",
+            data=excel_data_p,
+            file_name="historial_perfileria.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+
+        f_sys = st.selectbox("🔍 Filtrar por Sistema:", ["Todos los Sistemas"] + list(df_perf['Tipo_Sistema'].dropna().unique()))
+        df_p_filt = df_perf if f_sys == "Todos los Sistemas" else df_perf[df_perf['Tipo_Sistema'] == f_sys]
+        st.dataframe(df_p_filt, use_container_width=True)
+
+        st.markdown("### 📈 Tendencia Histórica")
+        lin_p_opts = df_p_filt['Nombre_Línea'].dropna().unique()
+        if len(lin_p_opts) > 0:
+            lin_p_sel = st.selectbox("Selecciona línea para graficar:", lin_p_opts)
+            df_lin_p = df_p_filt[df_p_filt['Nombre_Línea'] == lin_p_sel].copy()
+            if not df_lin_p.empty:
+                df_lin_p['Evolución'] = df_lin_p['Mes'] + " (" + df_lin_p['Fecha'].astype(str).str[:10] + ")"
+                pivot_p = df_lin_p.pivot_table(index='Evolución', columns='Sub_Elemento', values='Valor')
+                st.line_chart(pivot_p)
+
+    st.divider()
     with st.expander("🛠️ Configuración Módulo Perfilería (Protegido con PIN)"):
         pin_p = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_p")
         if pin_p == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            # 1. Editar Tipos de Sistema
             st.markdown("### 📁 Editar Tipos de Sistema")
             sys_ed = st.selectbox("Seleccionar Sistema", lineas_perf, key="syse")
             n_sys = st.text_input("Nuevo nombre de sistema", value=sys_ed, key="nsyse")
@@ -305,7 +366,6 @@ else:
                 st.rerun()
 
             st.markdown("---")
-            # 2. Editar Sub-líneas (Línea 1, 2, 3...)
             st.markdown("### 🧵 Editar Líneas")
             sublin_ed = st.selectbox("Seleccionar Línea", sub_lineas_perf, key="subline")
             n_sublin = st.text_input("Nuevo nombre de línea", value=sublin_ed, key="nsubline")
@@ -316,8 +376,7 @@ else:
                 st.rerun()
 
             st.markdown("---")
-            # 3. Editar Zonas
-            st.markdown("### 🌡️ Editar Zonas (Z1, Z2...)")
+            st.markdown("### 🌡️ Editar Zonas")
             zona_ed = st.selectbox("Seleccionar Zona", zonas_perf, key="zonae")
             n_zona = st.text_input("Nuevo nombre de zona", value=zona_ed, key="nzona")
             if st.button("💾 Guardar Zona"):
@@ -327,7 +386,6 @@ else:
                 st.rerun()
 
             st.markdown("---")
-            # 4. Editar Tinas
             st.markdown("### 🌊 Editar Tinas")
             tina_ed = st.selectbox("Seleccionar Tina", tinas_perf, key="tinae")
             n_tina = st.text_input("Nuevo nombre de tina", value=tina_ed, key="ntina")
@@ -338,7 +396,6 @@ else:
                 st.rerun()
 
             st.markdown("---")
-            # 5. Editar Bandas y Cortadoras (Generales)
             st.markdown("### ⚙️ Editar Bandas y Cortadoras")
             gen_ed = st.selectbox("Seleccionar Equipo (Banda/Cortadora)", generales_perf, key="gene")
             n_gen = st.text_input("Nuevo nombre de equipo", value=gen_ed, key="ngen")
