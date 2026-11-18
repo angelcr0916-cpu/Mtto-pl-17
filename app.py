@@ -21,6 +21,7 @@ LINEAS_PERF_FILE = "lineas_perf_config.csv"
 LINEAS_CUERDA_FILE = "lineas_cuerda_config.csv"
 EQUIPOS_CUERDA_FILE = "equipos_cuerda_config.csv"
 EMBOB_CUERDA_FILE = "embobinadoras_config.csv"
+SUBSISTEMAS_CUERDA_FILE = "subsistemas_config.csv"
 
 # --- FUNCIONES DE CONFIGURACIÓN DINÁMICA ---
 def cargar_config(file_path, default_list, col_name):
@@ -67,6 +68,11 @@ modo = st.sidebar.radio("Seleccionar Módulo:", ["🧵 Cuerda", "🏭 Perfilerí
 lineas_cuerda = cargar_config(LINEAS_CUERDA_FILE, ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5"], "Linea")
 equipos_cuerda = cargar_config(EQUIPOS_CUERDA_FILE, ["Extrusora 17", "Extrusora 04", "Extrusora 03", "Extrusora 05"], "Equipo")
 embobinadoras_cuerda = cargar_config(EMBOB_CUERDA_FILE, ["Embobinadora 1", "Embobinadora 2"], "Embobinadora")
+subsistemas_cuerda = cargar_config(SUBSISTEMAS_CUERDA_FILE, [
+    "Motor extrusor", "Godet 1", "Godet 2", "Bomba de engranes", 
+    "Extractor", "Secador", "Mezcladora", "Soplador"
+], "Subsistema")
+
 lineas_perf = cargar_config(LINEAS_PERF_FILE, ["Perfilería 1", "Perfilería 2", "Perfilería 3"], "Linea")
 zonas_perf = cargar_config(ZONAS_PERF_FILE, ["Cañón 1", "Cañón 2", "Cañón 3", "Zona 1", "Zona 2", "Zona 3", "Zona 4"], "Zona")
 
@@ -85,21 +91,20 @@ if modo == "🧵 Cuerda":
             
         mes_c = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10)
         
-        # --- 1. SUBSISTEMAS PRINCIPALES ---
+        # --- 1. SUBSISTEMAS PRINCIPALES DINÁMICOS ---
         st.markdown("---")
         st.markdown("⚙️ **1. Subsistemas Principales de la Extrusora**")
-        subsistemas = ["Motor extrusor", "Godet 1", "Godet 2", "Bomba de engranes", "Extractor", "Secador", "Mezcladora", "Soplador"]
         
         datos_subsistemas = {}
-        for sub in subsistemas:
+        for sub in subsistemas_cuerda:
             st.markdown(f"**🔹 {sub}**")
             c1, c2, c3 = st.columns(3)
             with c1:
-                t = st.number_input(f"Temp (°C) - {sub}", min_value=0.0, step=0.1, format="%.1f", key=f"t_{sub}")
+                t = st.number_input(f"Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"t_{sub}")
             with c2:
-                a = st.number_input(f"Amp (A) - {sub}", min_value=0.0, step=0.1, format="%.1f", key=f"a_{sub}")
+                a = st.number_input(f"Amp (A)", min_value=0.0, step=0.1, format="%.1f", key=f"a_{sub}")
             with c3:
-                v = st.number_input(f"Vib (mm/s) - {sub}", min_value=0.0, step=0.1, format="%.1f", key=f"v_{sub}")
+                v = st.number_input(f"Vib (mm/s)", min_value=0.0, step=0.1, format="%.1f", key=f"v_{sub}")
             datos_subsistemas[sub] = {"Temp": t, "Amp": a, "Vib": v}
 
         # --- 2. HORNO SECADOR ---
@@ -109,13 +114,14 @@ if modo == "🧵 Cuerda":
         st.markdown("🔹 *Sopladores del Horno*")
         sopladores_horno = {}
         for sop in ["Soplador 1", "Soplador 2"]:
+            st.markdown(f"**🔹 {sop}**")
             sc1, sc2, sc3 = st.columns(3)
             with sc1:
-                st_t = st.number_input(f"Temp (°C) - {sop}", min_value=0.0, step=0.1, format="%.1f", key=f"t_{sop}")
+                st_t = st.number_input(f"Temp (°C)", min_value=0.0, step=0.1, format="%.1f", key=f"t_{sop}")
             with sc2:
-                st_a = st.number_input(f"Amp (A) - {sop}", min_value=0.0, step=0.1, format="%.1f", key=f"a_{sop}")
+                st_a = st.number_input(f"Amp (A)", min_value=0.0, step=0.1, format="%.1f", key=f"a_{sop}")
             with sc3:
-                st_v = st.number_input(f"Vib (mm/s) - {sop}", min_value=0.0, step=0.1, format="%.1f", key=f"v_{sop}")
+                st_v = st.number_input(f"Vib (mm/s)", min_value=0.0, step=0.1, format="%.1f", key=f"v_{sop}")
             sopladores_horno[sop] = {"Temp": st_t, "Amp": st_a, "Vib": st_v}
 
         st.markdown("🔹 *Zonas Térmicas del Horno (con Sub-líneas 1, 2 y 3)*")
@@ -146,7 +152,7 @@ if modo == "🧵 Cuerda":
                     amps_emb.append(val_amp)
             embobinadoras_datos[emb] = amps_emb
 
-        submitted_c = st.form_submit_button("Guardar Registro Completo de Cuerda")
+        submitted_c = st.form_submit_button("Guardar Registro Completo de Extrusora")
         
         if submitted_c:
             if linea_c and extrusora_c:
@@ -182,12 +188,12 @@ if modo == "🧵 Cuerda":
                     for idx, val in enumerate(amps, start=1):
                         registros_nuevos.append({
                             "Fecha": fecha_actual, "Línea": linea_c, "Extrusora": extrusora_c, "Mes": mes_c,
-                            "Sección": "Embobinadoras", "Sub_Elemento": f"{emb}", "Métrica": f"Valor {idx} (Amp)", "Valor": val
+                            "Sección": "Embobinadoras", "Sub_Elemento": f"{emb}", "Métrica": f"Val {idx} (Amp)", "Valor": val
                         })
 
                 df_act_c = pd.concat([df_cuerda, pd.DataFrame(registros_nuevos)], ignore_index=True)
                 guardar_datos_cuerda(df_act_c)
-                st.success(f"¡Registro completo guardado con éxito para **{extrusora_c}** en **{linea_c}**!")
+                st.success(f"¡Registro completo guardado y congelado para **{extrusora_c}** en **{linea_c}**!")
                 st.rerun()
             else:
                 st.error("Por favor completa la Línea y la Extrusora.")
@@ -207,14 +213,33 @@ if modo == "🧵 Cuerda":
     st.divider()
 
     # --- ZONA DE CONFIGURACIÓN Y BORRADO (PROTEGIDA CON PIN) ---
-    with st.expander("🛠️ Configurar Líneas, Extrusoras, Embobinadoras y Borrado (Protegido con PIN)"):
-        st.markdown("Ingresa tu PIN de 4 dígitos para **administrar líneas, extrusoras, embobinadoras o borrar registros**.")
+    with st.expander("🛠️ Configurar Nombres, Líneas, Extrusoras y Borrado (Protegido con PIN)"):
+        st.markdown("Ingresa tu PIN de 4 dígitos para **personalizar nombres de subsistemas, agregar/quitar elementos o borrar registros**.")
         pin_c = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_c")
         
         if pin_c == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            # 1. Líneas
+            # 1. Personalizar Subsistemas (Godets, Bomba, etc.)
+            st.markdown("### ⚙️ Administrar Nombres de Subsistemas (Godets, Bombas, etc.)")
+            st.write("Subsistemas actuales:", subsistemas_cuerda)
+            nuevo_sub = st.text_input("Agregar nuevo subsistema", placeholder="Ej. Godet 3")
+            if st.button("➕ Agregar Subsistema"):
+                if nuevo_sub and nuevo_sub not in subsistemas_cuerda:
+                    subsistemas_cuerda.append(nuevo_sub)
+                    guardar_config(SUBSISTEMAS_CUERDA_FILE, subsistemas_cuerda, "Subsistema")
+                    st.success("¡Subsistema añadido!")
+                    st.rerun()
+
+            del_sub = st.selectbox("Eliminar Subsistema", ["Selecciona..."] + subsistemas_cuerda, key="del_sub")
+            if st.button("❌ Quitar Subsistema seleccionado") and del_sub != "Selecciona...":
+                subsistemas_cuerda.remove(del_sub)
+                guardar_config(SUBSISTEMAS_CUERDA_FILE, subsistemas_cuerda, "Subsistema")
+                st.success("Subsistema eliminado.")
+                st.rerun()
+
+            st.markdown("---")
+            # 2. Líneas
             st.markdown("### 🧵 Administrar Líneas de Cuerda")
             st.write("Líneas actuales:", lineas_cuerda)
             nueva_l_c = st.text_input("Agregar nueva Línea", placeholder="Ej. Línea 6")
@@ -233,10 +258,10 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
             st.markdown("---")
-            # 2. Extrusoras
+            # 3. Extrusoras
             st.markdown("### 🏭 Administrar Extrusoras")
             st.write("Extrusoras actuales:", equipos_cuerda)
-            nuevo_eq_c = st.text_input("Agregar nueva Extrusora", placeholder="Ej. Extrusora 08")
+            nuevo_eq_c = st.text_input("Agregar nueva Extrusora", placeholder="Ej. Extrusora 17")
             if st.button("➕ Agregar Extrusora"):
                 if nuevo_eq_c and nuevo_eq_c not in equipos_cuerda:
                     equipos_cuerda.append(nuevo_eq_c)
@@ -252,7 +277,7 @@ if modo == "🧵 Cuerda":
                 st.rerun()
 
             st.markdown("---")
-            # 3. Embobinadoras
+            # 4. Embobinadoras
             st.markdown("### 🌀 Administrar Embobinadoras")
             st.write("Embobinadoras actuales:", embobinadoras_cuerda)
             nueva_emb = st.text_input("Agregar nueva Embobinadora", placeholder="Ej. Embobinadora 3")
