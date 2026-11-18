@@ -23,6 +23,7 @@ SUBSISTEMAS_CUERDA_FILE = "subsistemas_config.csv"
 
 # Configuración Perfilería
 LINEAS_PERF_FILE = "lineas_perf_config.csv"
+SUB_LINEAS_PERF_FILE = "sub_lineas_perf_config.csv"
 EXT_PERF_FILE = "ext_perf_config.csv"
 ZONAS_PERF_FILE = "zonas_perf_config.csv"
 MOLDES_PERF_FILE = "moldes_perf_config.csv"
@@ -60,8 +61,9 @@ equipos_cuerda = cargar_config(EQUIPOS_CUERDA_FILE, ["Extrusora 17", "Extrusora 
 embobinadoras_cuerda = cargar_config(EMBOB_CUERDA_FILE, ["Embobinadora 1", "Embobinadora 2"], "Embobinadora")
 subsistemas_cuerda = cargar_config(SUBSISTEMAS_CUERDA_FILE, ["Motor extrusor", "Godet 1", "Godet 2", "Bomba de engranes", "Extractor", "Secador", "Mezcladora", "Soplador"], "Subsistema")
 
-# Opciones actualizadas forzadas para Perfilería
 lineas_perf = cargar_config(LINEAS_PERF_FILE, ["PPR", "CPVC", "PVC", "Tubo hidráulico", "Tubo de estante"], "Linea")
+sub_lineas_perf = cargar_config(SUB_LINEAS_PERF_FILE, ["Línea 1", "Línea 2", "Línea 3", "Línea 4", "Línea 5"], "SubLínea")
+
 ext_perf = cargar_config(EXT_PERF_FILE, ["Extrusora 43", "Extrusora 44", "Extrusora 45"], "Extrusora")
 zonas_perf = cargar_config(ZONAS_PERF_FILE, ["Z1", "Z2", "Z3", "Z4"], "Zona")
 moldes_perf = cargar_config(MOLDES_PERF_FILE, ["Molde 1", "Molde 2", "Molde 3", "Molde 4", "Molde 5", "Molde 6", "Molde 7", "Molde 8"], "Molde")
@@ -184,10 +186,11 @@ if modo == "🧵 Cuerda":
 else:
     # --- MÓDULO DE PERFILERÍA ---
     st.subheader("🏭 Módulo Perfilería (Detallado)")
-    df_perf = cargar_datos(PERF_FILE, ["Fecha", "Tipo_Sistema", "Extrusora/Sección", "Sub_Elemento", "Mes", "Métrica", "Valor"])
+    df_perf = cargar_datos(PERF_FILE, ["Fecha", "Tipo_Sistema", "Nombre_Línea", "Extrusora/Sección", "Sub_Elemento", "Mes", "Métrica", "Valor"])
 
     with st.form("registro_perfileria_detallado", clear_on_submit=True):
-        tipo_sistema = st.selectbox("Tipo de Sistema / Línea", lineas_perf)
+        tipo_sistema = st.selectbox("Tipo de Sistema / Material", lineas_perf)
+        nombre_linea = st.selectbox("Nombre / Número de Línea", sub_lineas_perf)
         mes_p = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10, key="mes_per")
         
         st.markdown("---")
@@ -262,27 +265,27 @@ else:
             
             for ext, vals in extrusoras_datos.items():
                 for sub_elem, val in vals.items():
-                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": ext, "Sub_Elemento": sub_elem, "Mes": mes_p, "Métrica": "Valor", "Valor": val})
+                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Nombre_Línea": nombre_linea, "Extrusora/Sección": ext, "Sub_Elemento": sub_elem, "Mes": mes_p, "Métrica": "Valor", "Valor": val})
             
             for mol, val in moldes_datos.items():
-                reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": "Moldes", "Sub_Elemento": mol, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
+                reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Nombre_Línea": nombre_linea, "Extrusora/Sección": "Moldes", "Sub_Elemento": mol, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
 
             for ext, vents in ventiladores_datos.items():
                 for v_name, val in vents.items():
-                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": f"Ventiladores {ext}", "Sub_Elemento": v_name, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
+                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Nombre_Línea": nombre_linea, "Extrusora/Sección": f"Ventiladores {ext}", "Sub_Elemento": v_name, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
 
             for tina, bs in tinas_datos.items():
                 for bomba, metrics in bs.items():
                     for met, val in metrics.items():
-                        reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": f"Tina {tina}", "Sub_Elemento": bomba, "Mes": mes_p, "Métrica": met, "Valor": val})
+                        reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Nombre_Línea": nombre_linea, "Extrusora/Sección": f"Tina {tina}", "Sub_Elemento": bomba, "Mes": mes_p, "Métrica": met, "Valor": val})
 
             for gen, metrics in generales_datos.items():
                 for met, val in metrics.items():
-                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": "Equipos Generales", "Sub_Elemento": gen, "Mes": mes_p, "Métrica": met, "Valor": val})
+                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Nombre_Línea": nombre_linea, "Extrusora/Sección": "Equipos Generales", "Sub_Elemento": gen, "Mes": mes_p, "Métrica": met, "Valor": val})
 
             df_act_p = pd.concat([df_perf, pd.DataFrame(reg_perf)], ignore_index=True)
             guardar_datos(PERF_FILE, df_act_p)
-            st.success(f"¡Registro completo guardado para **{tipo_sistema}**!")
+            st.success(f"¡Registro guardado para **{tipo_sistema} - {nombre_linea}**!")
             st.rerun()
 
     st.divider()
@@ -291,32 +294,28 @@ else:
         if pin_p == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            # --- SECCIÓN PARA REEMPLAZAR O FORZAR LA LISTA NUEVA SI PERSISTE EL CACHÉ ---
-            if st.button("🔄 Restablecer lista por defecto (PPR, CPVC, PVC, etc.)"):
-                guardar_config(LINEAS_PERF_FILE, ["PPR", "CPVC", "PVC", "Tubo hidráulico", "Tubo de estante"], "Linea")
-                st.success("¡Lista restablecida con éxito! Recarga la página.")
+            # Editar Sub-líneas (Línea 1, 2, 3...)
+            sublin_ed = st.selectbox("Editar Nombre de Línea", sub_lineas_perf, key="subline")
+            n_sublin = st.text_input("Nuevo nombre de línea", value=sublin_ed, key="nsubline")
+            if st.button("💾 Guardar Nombre de Línea"):
+                sub_lineas_perf[sub_lineas_perf.index(sublin_ed)] = n_sublin
+                guardar_config(SUB_LINEAS_PERF_FILE, sub_lineas_perf, "SubLínea")
                 st.rerun()
 
-            sys_ed = st.selectbox("Editar Sistema / Línea Perf", lineas_perf, key="syse")
-            n_sys = st.text_input("Nuevo nombre de sistema", value=sys_ed, key="nsyse")
-            if st.button("💾 Guardar Sistema Perf"):
-                lineas_perf[lineas_perf.index(sys_ed)] = n_sys
-                guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
-                st.rerun()
-
-            nuevo_sys = st.text_input("Agregar nuevo Sistema / Línea", placeholder="Ej. Nuevo material")
-            if st.button("➕ Agregar Sistema Perf"):
-                if nuevo_sys and nuevo_sys not in lineas_perf:
-                    lineas_perf.append(nuevo_sys)
-                    guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
-                    st.success("¡Sistema añadido!")
+            nueva_sublin = st.text_input("Agregar nueva Línea", placeholder="Ej. Línea 6")
+            if st.button("➕ Agregar Línea"):
+                if nueva_sublin and nueva_sublin not in sub_lineas_perf:
+                    sub_lineas_perf.append(nueva_sublin)
+                    guardar_config(SUB_LINEAS_PERF_FILE, sub_lineas_perf, "SubLínea")
+                    st.success("¡Línea añadida!")
                     st.rerun()
 
-            ext_ed = st.selectbox("Editar Extrusora Perfilería", ext_perf, key="exte")
-            n_ext = st.text_input("Nuevo nombre extrusora", value=ext_ed, key="nexte")
-            if st.button("💾 Guardar Extrusora Perf"):
-                ext_perf[ext_perf.index(ext_ed)] = n_ext
-                guardar_config(EXT_PERF_FILE, ext_perf, "Extrusora")
+            # Editar Tipos de Sistema
+            sys_ed = st.selectbox("Editar Tipo de Sistema", lineas_perf, key="syse")
+            n_sys = st.text_input("Nuevo nombre de sistema", value=sys_ed, key="nsyse")
+            if st.button("💾 Guardar Sistema"):
+                lineas_perf[lineas_perf.index(sys_ed)] = n_sys
+                guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
                 st.rerun()
                 
         elif pin_p != "":
