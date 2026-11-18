@@ -60,7 +60,8 @@ equipos_cuerda = cargar_config(EQUIPOS_CUERDA_FILE, ["Extrusora 17", "Extrusora 
 embobinadoras_cuerda = cargar_config(EMBOB_CUERDA_FILE, ["Embobinadora 1", "Embobinadora 2"], "Embobinadora")
 subsistemas_cuerda = cargar_config(SUBSISTEMAS_CUERDA_FILE, ["Motor extrusor", "Godet 1", "Godet 2", "Bomba de engranes", "Extractor", "Secador", "Mezcladora", "Soplador"], "Subsistema")
 
-lineas_perf = cargar_config(LINEAS_PERF_FILE, ["Línea PPR 1", "Línea PPR 2", "Línea PPR 3", "Línea PPR 4", "Línea PPR 5"], "Linea")
+# Actualizado con las opciones solicitadas por defecto para Perfilería
+lineas_perf = cargar_config(LINEAS_PERF_FILE, ["PPR", "CPVC", "PVC", "Tubo hidráulico", "Tubo de estante"], "Linea")
 ext_perf = cargar_config(EXT_PERF_FILE, ["Extrusora 43", "Extrusora 44", "Extrusora 45"], "Extrusora")
 zonas_perf = cargar_config(ZONAS_PERF_FILE, ["Z1", "Z2", "Z3", "Z4"], "Zona")
 moldes_perf = cargar_config(MOLDES_PERF_FILE, ["Molde 1", "Molde 2", "Molde 3", "Molde 4", "Molde 5", "Molde 6", "Molde 7", "Molde 8"], "Molde")
@@ -165,14 +166,12 @@ if modo == "🧵 Cuerda":
         pin_c = st.text_input("PIN de seguridad", type="password", max_chars=4, key="pin_c")
         if pin_c == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
-            # Subsistemas
             sub_ed = st.selectbox("Editar Subsistema", subsistemas_cuerda, key="se")
             n_sub = st.text_input("Nuevo nombre", value=sub_ed, key="nse")
             if st.button("💾 Guardar Subsistema"):
                 subsistemas_cuerda[subsistemas_cuerda.index(sub_ed)] = n_sub
                 guardar_config(SUBSISTEMAS_CUERDA_FILE, subsistemas_cuerda, "Subsistema")
                 st.rerun()
-            # Líneas Cuerda
             lin_ed = st.selectbox("Editar Línea Cuerda", lineas_cuerda, key="le")
             n_lin = st.text_input("Nuevo nombre línea", value=lin_ed, key="nle")
             if st.button("💾 Guardar Línea"):
@@ -185,10 +184,10 @@ if modo == "🧵 Cuerda":
 else:
     # --- MÓDULO DE PERFILERÍA ---
     st.subheader("🏭 Módulo Perfilería (Detallado)")
-    df_perf = cargar_datos(PERF_FILE, ["Fecha", "Línea_PPR", "Extrusora/Sección", "Sub_Elemento", "Mes", "Métrica", "Valor"])
+    df_perf = cargar_datos(PERF_FILE, ["Fecha", "Tipo_Sistema", "Extrusora/Sección", "Sub_Elemento", "Mes", "Métrica", "Valor"])
 
     with st.form("registro_perfileria_detallado", clear_on_submit=True):
-        linea_ppr = st.selectbox("Línea de PPR", lineas_perf)
+        tipo_sistema = st.selectbox("Tipo de Sistema / Línea", lineas_perf)
         mes_p = st.selectbox("Mes", ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"], index=10, key="mes_per")
         
         st.markdown("---")
@@ -197,10 +196,8 @@ else:
         for ext in ext_perf:
             st.markdown(f"**🔹 {ext}**")
             ext_vals = {}
-            # Zonas térmicas
             for z in zonas_perf:
                 ext_vals[z] = st.number_input(f"{ext} - {z} (Amp/Temp)", min_value=0.0, step=0.1, format="%.1f", key=f"{ext}_{z}")
-            # Brida y Conector (puro amperaje)
             ext_vals["Brida del cilindro"] = st.number_input(f"{ext} - Brida del cilindro (Amp)", min_value=0.0, step=0.1, format="%.1f", key=f"{ext}_brida")
             ext_vals["Conector"] = st.number_input(f"{ext} - Conector (Amp)", min_value=0.0, step=0.1, format="%.1f", key=f"{ext}_conector")
             extrusoras_datos[ext] = ext_vals
@@ -263,34 +260,29 @@ else:
             fecha_actual = datetime.now().strftime("%Y-%m-%d %H:%M")
             reg_perf = []
             
-            # Guardar extrusoras perfilería
             for ext, vals in extrusoras_datos.items():
                 for sub_elem, val in vals.items():
-                    reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": ext, "Sub_Elemento": sub_elem, "Mes": mes_p, "Métrica": "Valor", "Valor": val})
+                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": ext, "Sub_Elemento": sub_elem, "Mes": mes_p, "Métrica": "Valor", "Valor": val})
             
-            # Guardar moldes
             for mol, val in moldes_datos.items():
-                reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": "Moldes", "Sub_Elemento": mol, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
+                reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": "Moldes", "Sub_Elemento": mol, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
 
-            # Guardar ventiladores
             for ext, vents in ventiladores_datos.items():
                 for v_name, val in vents.items():
-                    reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": f"Ventiladores {ext}", "Sub_Elemento": v_name, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
+                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": f"Ventiladores {ext}", "Sub_Elemento": v_name, "Mes": mes_p, "Métrica": "Amp", "Valor": val})
 
-            # Guardar tinas
             for tina, bs in tinas_datos.items():
                 for bomba, metrics in bs.items():
                     for met, val in metrics.items():
-                        reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": f"Tina {tina}", "Sub_Elemento": bomba, "Mes": mes_p, "Métrica": met, "Valor": val})
+                        reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": f"Tina {tina}", "Sub_Elemento": bomba, "Mes": mes_p, "Métrica": met, "Valor": val})
 
-            # Guardar bandas/cortadoras
             for gen, metrics in generales_datos.items():
                 for met, val in metrics.items():
-                    reg_perf.append({"Fecha": fecha_actual, "Línea_PPR": linea_ppr, "Extrusora/Sección": "Equipos Generales", "Sub_Elemento": gen, "Mes": mes_p, "Métrica": met, "Valor": val})
+                    reg_perf.append({"Fecha": fecha_actual, "Tipo_Sistema": tipo_sistema, "Extrusora/Sección": "Equipos Generales", "Sub_Elemento": gen, "Mes": mes_p, "Métrica": met, "Valor": val})
 
             df_act_p = pd.concat([df_perf, pd.DataFrame(reg_perf)], ignore_index=True)
             guardar_datos(PERF_FILE, df_act_p)
-            st.success(f"¡Registro completo guardado para **{linea_ppr}**!")
+            st.success(f"¡Registro completo guardado para **{tipo_sistema}**!")
             st.rerun()
 
     st.divider()
@@ -299,13 +291,22 @@ else:
         if pin_p == PIN_SEGURIDAD:
             st.success("✅ Acceso autorizado.")
             
-            # Editar Líneas PPR
-            lppr_ed = st.selectbox("Editar Línea PPR", lineas_perf, key="lppre")
-            n_lppr = st.text_input("Nuevo nombre de línea PPR", value=lppr_ed, key="nlppre")
-            if st.button("💾 Guardar Línea PPR"):
-                lineas_perf[lineas_perf.index(lppr_ed)] = n_lppr
+            # Editar Tipos de Sistema / Líneas Perfilería
+            sys_ed = st.selectbox("Editar Sistema / Línea Perf", lineas_perf, key="syse")
+            n_sys = st.text_input("Nuevo nombre de sistema", value=sys_ed, key="nsyse")
+            if st.button("💾 Guardar Sistema Perf"):
+                lineas_perf[lineas_perf.index(sys_ed)] = n_sys
                 guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
                 st.rerun()
+
+            # Agregar nuevo Sistema / Línea
+            nuevo_sys = st.text_input("Agregar nuevo Sistema / Línea", placeholder="Ej. Nuevo material")
+            if st.button("➕ Agregar Sistema Perf"):
+                if nuevo_sys and nuevo_sys not in lineas_perf:
+                    lineas_perf.append(nuevo_sys)
+                    guardar_config(LINEAS_PERF_FILE, lineas_perf, "Linea")
+                    st.success("¡Sistema añadido!")
+                    st.rerun()
 
             # Editar Extrusoras Perfilería
             ext_ed = st.selectbox("Editar Extrusora Perfilería", ext_perf, key="exte")
